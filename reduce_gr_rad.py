@@ -31,6 +31,8 @@ Options:
       approximately square cells given other inputs
   --n_ph: number of azimuthal zones in 3D version of output grid; default:
       integer that yields approximately square cells given other inputs
+  --no_interp: flag indicating remapping should be done with nearest neighbors
+      rather than interpolation
 
 Reduction is performed as follows: For each cell in the new (phi,theta,r) grid,
 the primitives are obtained via trilinear interpolation on the old (z,y,x) grid
@@ -53,9 +55,14 @@ import numpy as np
 # Main function
 def main(**kwargs):
 
-  # Parameters
+  # Parameters - fixed
   cells_per_decade = 10.0
   r_square = 10.0
+  quantities_to_extract = ('dens', 'eint', 'velx', 'vely', 'velz')
+  quantities_to_average = ('rho', 'ugas', 'pgas', 'T_cgs', 'uut', 'ut', 'ur', 'uth', 'uph', 'vx', 'vy', 'vz', 'Tgas_rph_f', 'Tgas_thph_f')
+  quantities_to_save = ('rho', 'ugas', 'pgas', 'T_cgs', 'uut', 'ut', 'ur', 'uth', 'uph', 'vx', 'vy', 'vz', 'Tgas_rph_f', 'Tgas_thph_f')
+
+  # Parameters - inputs
   input_file_base = kwargs['input_file_base']
   output_file_base = kwargs['output_file_base']
   frame_min = kwargs['frame_min']
@@ -67,7 +74,12 @@ def main(**kwargs):
   lat_max = kwargs['lat_max']
   n_th = kwargs['n_th']
   n_ph = kwargs['n_ph']
-  dependencies = ('dens',)
+  interp = not kwargs['no_interp']
+
+  # Parameters - physical units
+  c_cgs = 2.99792458e10
+  kb_cgs = 1.380649e-16
+  mp_cgs = 1.67262192369e-24
 
   # Go through files
   for frame_n, frame in enumerate(range(frame_min, frame_max + 1, frame_stride)):
@@ -128,12 +140,12 @@ def main(**kwargs):
         num_variables_base = len(variable_names_base)
         variable_names = []
         variable_inds = []
-        for dependency in dependencies:
-          if dependency not in variable_names_base:
-            raise RuntimeError('Required variable {0} not found.'.format(dependency))
-          variable_names.append(dependency)
+        for quantity in quantities_to_extract:
+          if quantity not in variable_names_base:
+            raise RuntimeError('Required variable {0} not found.'.format(quantity))
+          variable_names.append(quantity)
           variable_ind = 0
-          while variable_names_base[variable_ind] != dependency:
+          while variable_names_base[variable_ind] != quantity:
             variable_ind += 1
           variable_inds.append(variable_ind)
         variable_names_sorted = [name for _, name in sorted(zip(variable_inds, variable_names))]
@@ -174,6 +186,22 @@ def main(**kwargs):
           a = float(input_data['coord']['a'])
         except:
           raise RuntimeError('Unable to find black hole spin in input file.')
+
+      # Extract adiabatic index from input file metadata
+      if frame_n == 0:
+        try:
+          gamma_adi = float(input_data['mhd']['gamma'])
+        except:
+          raise RuntimeError('Unable to find adiabatic index in input file.')
+
+      # Extract molecular weight from input file metadata
+      if frame_n == 0:
+        try:
+          mu = float(input_data['units']['mu'])
+        except:
+          # TODO: remove
+          mu = 0.5
+          # raise RuntimeError('Unable to find molecular weight in input file.')
 
       # Prepare lists to hold results
       if frame_n == 0:
@@ -254,48 +282,61 @@ def main(**kwargs):
       lrf = np.linspace(np.log(r_min), np.log(r_max), n_r + 1)
       lr = 0.5 * (lrf[:-1] + lrf[1:])
       rf = np.exp(lrf)
-      r = np.exp(lr)
+      r = np.exp(lr)[None,None,:]
       thf = np.linspace(th_min, th_max, n_th + 1)
-      th = 0.5 * (thf[:-1] + thf[1:])
+      th = 0.5 * (thf[:-1] + thf[1:])[None,:,None]
       sth = np.sin(th)
       cth = np.cos(th)
       phf = np.linspace(ph_min, ph_max, n_ph + 1)
-      ph = 0.5 * (phf[:-1] + phf[1:])
+      ph = 0.5 * (phf[:-1] + phf[1:])[:,None,None]
       sph = np.sin(ph)
       cph = np.cos(ph)
 
     # Construct mapping
     if frame_n == 0:
       inds = np.empty((4, n_ph, n_th, n_r), dtype=int)
-      weights = np.empty((3, n_ph, n_th, n_r))
+      if interp:
+        weights = np.empty((3, n_ph, n_th, n_r))
       for ind_ph in range(n_ph):
         for ind_th in range(n_th):
           for ind_r in range(n_r):
-            x_val = sth[ind_th] * (r[ind_r] * cph[ind_ph] - a * sph[ind_ph])
-            y_val = sth[ind_th] * (r[ind_r] * sph[ind_ph] + a * cph[ind_ph])
-            z_val = r[ind_r] * cth[ind_th]
+            x_val = sth[0,ind_th,0] * (r[0,0,ind_r] * cph[ind_ph,0,0] - a * sph[ind_ph,0,0])
+            y_val = sth[0,ind_th,0] * (r[0,0,ind_r] * sph[ind_ph,0,0] + a * cph[ind_ph,0,0])
+            z_val = r[0,0,ind_r] * cth[0,ind_th,0]
             x_inds = (x_val >= block_lims[:,0]) & (x_val < block_lims[:,1])
             y_inds = (y_val >= block_lims[:,2]) & (y_val < block_lims[:,3])
             z_inds = (z_val >= block_lims[:,4]) & (z_val < block_lims[:,5])
             ind_b = np.where(x_inds & y_inds & z_inds)[0][0]
             inds[0,ind_ph,ind_th,ind_r] = ind_b
-            ind_frac_x = (x_val - block_lims[ind_b,0]) / (block_lims[ind_b,1] - block_lims[ind_b,0]) * n_x - 0.5
-            ind_frac_y = (y_val - block_lims[ind_b,2]) / (block_lims[ind_b,3] - block_lims[ind_b,2]) * n_y - 0.5
-            ind_frac_z = (z_val - block_lims[ind_b,4]) / (block_lims[ind_b,5] - block_lims[ind_b,4]) * n_z - 0.5
-            ind_x = min(int(ind_frac_x), n_x - 2)
-            ind_y = min(int(ind_frac_y), n_y - 2)
-            ind_z = min(int(ind_frac_z), n_z - 2)
-            inds[1,ind_ph,ind_th,ind_r] = ind_z
-            inds[2,ind_ph,ind_th,ind_r] = ind_y
-            inds[3,ind_ph,ind_th,ind_r] = ind_x
-            weights[0,ind_ph,ind_th,ind_r] = ind_frac_z - ind_z
-            weights[1,ind_ph,ind_th,ind_r] = ind_frac_y - ind_y
-            weights[2,ind_ph,ind_th,ind_r] = ind_frac_x - ind_x
+            if interp:
+              ind_frac_x = (x_val - block_lims[ind_b,0]) / (block_lims[ind_b,1] - block_lims[ind_b,0]) * n_x - 0.5
+              ind_frac_y = (y_val - block_lims[ind_b,2]) / (block_lims[ind_b,3] - block_lims[ind_b,2]) * n_y - 0.5
+              ind_frac_z = (z_val - block_lims[ind_b,4]) / (block_lims[ind_b,5] - block_lims[ind_b,4]) * n_z - 0.5
+              ind_x = min(int(ind_frac_x), n_x - 2)
+              ind_y = min(int(ind_frac_y), n_y - 2)
+              ind_z = min(int(ind_frac_z), n_z - 2)
+              inds[1,ind_ph,ind_th,ind_r] = ind_z
+              inds[2,ind_ph,ind_th,ind_r] = ind_y
+              inds[3,ind_ph,ind_th,ind_r] = ind_x
+              weights[0,ind_ph,ind_th,ind_r] = ind_frac_z - ind_z
+              weights[1,ind_ph,ind_th,ind_r] = ind_frac_y - ind_y
+              weights[2,ind_ph,ind_th,ind_r] = ind_frac_x - ind_x
+            else:
+              ind_frac_x = (x_val - block_lims[ind_b,0]) / (block_lims[ind_b,1] - block_lims[ind_b,0]) * n_x
+              ind_frac_y = (y_val - block_lims[ind_b,2]) / (block_lims[ind_b,3] - block_lims[ind_b,2]) * n_y
+              ind_frac_z = (z_val - block_lims[ind_b,4]) / (block_lims[ind_b,5] - block_lims[ind_b,4]) * n_z
+              ind_x = min(int(ind_frac_x), n_x - 1)
+              ind_y = min(int(ind_frac_y), n_y - 1)
+              ind_z = min(int(ind_frac_z), n_z - 1)
+              inds[1,ind_ph,ind_th,ind_r] = ind_z
+              inds[2,ind_ph,ind_th,ind_r] = ind_y
+              inds[3,ind_ph,ind_th,ind_r] = ind_x
 
     # Remap data to 3D SKS grid
     if frame_n == 0:
       data_3d = {}
-      data_3d['rho'] = np.empty((n_ph, n_th, n_r))
+      for quantity in quantities_to_extract:
+        data_3d[quantity] = np.empty((n_ph, n_th, n_r))
     for ind_ph in range(n_ph):
       for ind_th in range(n_th):
         for ind_r in range(n_r):
@@ -303,39 +344,182 @@ def main(**kwargs):
           ind_z = inds[1,ind_ph,ind_th,ind_r]
           ind_y = inds[2,ind_ph,ind_th,ind_r]
           ind_x = inds[3,ind_ph,ind_th,ind_r]
-          weight_z = weights[0,ind_ph,ind_th,ind_r]
-          weight_y = weights[1,ind_ph,ind_th,ind_r]
-          weight_x = weights[2,ind_ph,ind_th,ind_r]
-          val_mmm = data_cks['dens'][ind_b,ind_z,ind_y,ind_x]
-          val_mmp = data_cks['dens'][ind_b,ind_z,ind_y,ind_x+1]
-          val_mpm = data_cks['dens'][ind_b,ind_z,ind_y+1,ind_x]
-          val_mpp = data_cks['dens'][ind_b,ind_z,ind_y+1,ind_x+1]
-          val_pmm = data_cks['dens'][ind_b,ind_z+1,ind_y,ind_x]
-          val_pmp = data_cks['dens'][ind_b,ind_z+1,ind_y,ind_x+1]
-          val_ppm = data_cks['dens'][ind_b,ind_z+1,ind_y+1,ind_x]
-          val_ppp = data_cks['dens'][ind_b,ind_z+1,ind_y+1,ind_x+1]
-          data_3d['rho'][ind_ph,ind_th,ind_r] = (1.0 - weight_z) * ((1.0 - weight_y) * ((1.0 - weight_x) * val_mmm + weight_x * val_mmp) + weight_y * ((1.0 - weight_x) * val_mpm + weight_x * val_mpp)) + weight_z * ((1.0 - weight_y) * ((1.0 - weight_x) * val_pmm + weight_x * val_pmp) + weight_y * ((1.0 - weight_x) * val_ppm + weight_x * val_ppp))
+          if interp:
+            weight_z = weights[0,ind_ph,ind_th,ind_r]
+            weight_y = weights[1,ind_ph,ind_th,ind_r]
+            weight_x = weights[2,ind_ph,ind_th,ind_r]
+            for quantity in quantities_to_extract:
+              val_mmm = data_cks[quantity][ind_b,ind_z,ind_y,ind_x]
+              val_mmp = data_cks[quantity][ind_b,ind_z,ind_y,ind_x+1]
+              val_mpm = data_cks[quantity][ind_b,ind_z,ind_y+1,ind_x]
+              val_mpp = data_cks[quantity][ind_b,ind_z,ind_y+1,ind_x+1]
+              val_pmm = data_cks[quantity][ind_b,ind_z+1,ind_y,ind_x]
+              val_pmp = data_cks[quantity][ind_b,ind_z+1,ind_y,ind_x+1]
+              val_ppm = data_cks[quantity][ind_b,ind_z+1,ind_y+1,ind_x]
+              val_ppp = data_cks[quantity][ind_b,ind_z+1,ind_y+1,ind_x+1]
+              data_3d[quantity][ind_ph,ind_th,ind_r] = (1.0 - weight_z) * ((1.0 - weight_y) * ((1.0 - weight_x) * val_mmm + weight_x * val_mmp) + weight_y * ((1.0 - weight_x) * val_mpm + weight_x * val_mpp)) + weight_z * ((1.0 - weight_y) * ((1.0 - weight_x) * val_pmm + weight_x * val_pmp) + weight_y * ((1.0 - weight_x) * val_ppm + weight_x * val_ppp))
+          else:
+            for quantity in quantities_to_extract:
+              data_3d[quantity][ind_ph,ind_th,ind_r] = data_cks[quantity][ind_b,ind_z,ind_y,ind_x]
 
-    # TODO: Convert data to SKS components
+    # Calculate CKS coordinates
+    if frame_n == 0:
+      x = sth * (r * cph - a * sph)
+      y = sth * (r * sph + a * cph)
+      z = r * cth
+      r2 = r ** 2
+      x2 = x ** 2
+      y2 = y ** 2
+      z2 = z ** 2
 
-    # TODO: Calculate pre-averaging derived quantities
+    # Calculate SKS metric
+    if frame_n == 0:
+      sth2 = sth ** 2
+      cth2 = cth ** 2
+      delta = r2 - 2.0 * r + a2
+      sigma_coord = r2 + a2 * cth2
+      f = 2.0 * r / sigma_coord
+      g_tt = -(1.0 - f)
+      g_tr = f
+      g_tph = -a * f * sth2
+      g_rr = 1.0 + f
+      g_rph = -(1.0 + f) * a * sth2
+      g_thth = sigma_coord
+      g_phph = (r2 + a2 + a2 * f * sth2) * sth2
+      gtt = -(1.0 + f)
+      gtr = f
+      grr = delta / sigma_coord
+      grph = a / sigma_coord
+      gthth = 1.0 / sigma_coord
+      gphph = 1.0 / (sigma_coord * sth2)
+
+    # Calculate CKS metric
+    if frame_n == 0:
+      lx = (r * x + a * y) / (r2 + a2)
+      ly = (r * y - a * x) / (r2 + a2)
+      lz = z / r
+      g_xx = f * lx * lx + 1.0
+      g_xy = f * lx * ly
+      g_xz = f * lx * lz
+      g_yy = f * ly * ly + 1.0
+      g_yz = f * ly * lz
+      g_zz = f * lz * lz + 1.0
+      gtx = f * lx
+      gty = f * ly
+      gtz = f * lz
+      alpha_coord = 1.0 / np.sqrt(-gtt)
+      betax = -gtx / gtt
+      betay = -gty / gtt
+      betaz = -gtz / gtt
+
+    # Calculate Jacobian
+    if frame_n == 0:
+      rr2 = x2 + y2 + z2
+      rr = np.sqrt(rr2)
+      drr_dx = x / rr
+      drr_dy = y / rr
+      drr_dz = z / rr
+      dr_dx = rr * r * drr_dx / (2.0 * r2 - rr2 + a2)
+      dr_dy = rr * r * drr_dy / (2.0 * r2 - rr2 + a2)
+      dr_dz = (rr * r * drr_dz + a2 * z / r) / (2.0 * r2 - rr2 + a2)
+      dth_dx = z / r * dr_dx / np.sqrt(r2 - z2)
+      dth_dy = z / r * dr_dy / np.sqrt(r2 - z2)
+      dth_dz = (z / r * dr_dz - 1.0) / np.sqrt(r2 - z2)
+      dph_dx = -y / (x2 + y2) + a * dr_dx / (r2 + a2)
+      dph_dy = x / (x2 + y2) + a * dr_dy / (r2 + a2)
+      dph_dz = a * dr_dz / (r2 + a2)
+
+    # Rename variables
+    data_3d['rho'] = data_3d['dens']
+    data_3d['ugas'] = data_3d['eint']
+    data_3d['uux'] = data_3d['velx']
+    data_3d['uuy'] = data_3d['vely']
+    data_3d['uuz'] = data_3d['velz']
+
+    # Convert data to SKS components
+    data_3d['uut'] = np.sqrt(1.0 + g_xx * data_3d['uux'] ** 2 + 2.0 * g_xy * data_3d['uux'] * data_3d['uuy'] + 2.0 * g_xz * data_3d['uux'] * data_3d['uuz'] + g_yy * data_3d['uuy'] ** 2 + 2.0 * g_yz * data_3d['uuy'] * data_3d['uuz'] + g_zz * data_3d['uuz'] ** 2)
+    data_3d['ut'] = data_3d['uut'] / alpha_coord
+    data_3d['ux'] = data_3d['uux'] - betax * data_3d['ut']
+    data_3d['uy'] = data_3d['uuy'] - betay * data_3d['ut']
+    data_3d['uz'] = data_3d['uuz'] - betaz * data_3d['ut']
+    data_3d['ur'] = dr_dx * data_3d['ux'] + dr_dy * data_3d['uy'] + dr_dz * data_3d['uz']
+    data_3d['uth'] = dth_dx * data_3d['ux'] + dth_dy * data_3d['uy'] + dth_dz * data_3d['uz']
+    data_3d['uph'] = dph_dx * data_3d['ux'] + dph_dy * data_3d['uy'] + dph_dz * data_3d['uz']
+    u_t = g_tt * data_3d['ut'] + g_tr * data_3d['ur'] + g_tph * data_3d['uph']
+    u_r = g_tr * data_3d['ut'] + g_rr * data_3d['ur'] + g_rph * data_3d['uph']
+    u_th = g_thth * data_3d['uth']
+    u_ph = g_tph * data_3d['ut'] + g_rph * data_3d['ur'] + g_phph * data_3d['uph']
+
+    # Calculate pre-averaging derived quantities
+    data_3d['pgas'] = (gamma_adi - 1.0) * data_3d['ugas']
+    data_3d['T_cgs'] = mu * mp_cgs * c_cgs ** 2 / kb_cgs * data_3d['pgas'] / data_3d['rho']
+    data_3d['vx'] = data_3d['ux'] / data_3d['ut']
+    data_3d['vy'] = data_3d['uy'] / data_3d['ut']
+    data_3d['vz'] = data_3d['uz'] / data_3d['ut']
+    uaver = 0.0
+    uaveth = 0.0
+    uaveph = np.sum(data_3d['uph'] * data_3d['rho'], axis=0) / np.sum(data_3d['rho'], axis=0)[None,:,:]
+    uavet = (-g_tph * uaveph - np.sqrt((g_tph * uaveph) ** 2 - g_tt * (g_phph * uaveph ** 2 + 1.0))) / g_tt
+    uave_t = g_tt * uavet + g_tph * uaveph
+    uave_r = g_tr * uavet + g_rph * uaveph
+    uave_ph = g_tph * uavet + g_phph * uaveph
+    ft_tave = uavet
+    fr_tave = 0.0
+    fth_tave = 0.0
+    fph_tave = uaveph
+    ft_phave = 1.0
+    fr_phave = 0.0
+    fth_phave = 0.0
+    fph_phave = -uave_t / uave_ph
+    norm = np.sqrt(g_tt + 2.0 * g_tph * fph_phave + g_phph * fph_phave ** 2)
+    ft_phave /= norm
+    fph_phave /= norm
+    ft_rave = 1.0
+    fr_rave = (uave_ph * g_tt * uave_ph - uave_ph * g_tph * uave_t - uave_t * g_tph * uave_ph + uave_t * g_phph * uave_t) / (uave_r * g_tph * uave_ph - uave_r * g_phph * uave_t - uave_ph * g_tr * uave_ph + uave_ph * g_rph * uave_t)
+    fth_rave = 0.0
+    fph_rave = (uave_r * g_tph * uave_t - uave_r * g_tt * uave_ph - uave_t * g_rph * uave_t + uave_t * g_tr * uave_ph) / (uave_r * g_tph * uave_ph - uave_r * g_phph * uave_t - uave_ph * g_tr * uave_ph + uave_ph * g_rph * uave_t)
+    norm = np.sqrt(g_tt + 2.0 * g_tr * fr_rave + 2.0 * g_tph * fph_rave + g_rr * fr_rave ** 2 + 2.0 * g_rph * fr_rave * fph_rave + g_phph * fph_rave ** 2)
+    ft_rave /= norm
+    fr_rave /= norm
+    fph_rave /= norm
+    levi_civita_t = fr_phave * fth_tave * fph_rave + fph_phave * fr_tave * fth_rave + fth_phave * fph_tave * fr_rave - fr_phave * fph_tave * fth_rave - fth_phave * fr_tave * fph_rave - fph_phave * fth_tave * fr_rave
+    levi_civita_r = ft_phave * fph_tave * fth_rave + fth_phave * ft_tave * fph_rave + fph_phave * fth_tave * ft_rave - ft_phave * fth_tave * fph_rave - fph_phave * ft_tave * fth_rave - fth_phave * fph_tave * ft_rave
+    levi_civita_th = ft_phave * fr_tave * fph_rave + fph_phave * ft_tave * fr_rave + fr_phave * fph_tave * ft_rave - ft_phave * fph_tave * fr_rave - fr_phave * ft_tave * fph_rave - fph_phave * fr_tave * ft_rave
+    levi_civita_ph = ft_phave * fth_tave * fr_rave + fr_phave * ft_tave * fth_rave + fth_phave * fr_tave * ft_rave - ft_phave * fr_tave * fth_rave - fth_phave * ft_tave * fr_rave - fr_phave * fth_tave * ft_rave
+    ft_thave = sigma_coord * sth * (gtt * levi_civita_t + gtr * levi_civita_r)
+    fr_thave = sigma_coord * sth * (gtr * levi_civita_t + grr * levi_civita_r + grph * levi_civita_ph)
+    fth_thave = sigma_coord * sth * gthth * levi_civita_th
+    fph_thave = sigma_coord * sth * (grph * levi_civita_r + gphph * levi_civita_ph)
+    wgas = data_3d['rho'] + data_3d['ugas'] + data_3d['pgas']
+    ttgas_tt = wgas * u_t * u_t + data_3d['pgas'] * g_tt
+    ttgas_tr = wgas * u_t * u_r + data_3d['pgas'] * g_tr
+    ttgas_tth = wgas * u_t * u_th
+    ttgas_tph = wgas * u_t * u_ph + data_3d['pgas'] * g_tph
+    ttgas_rr = wgas * u_r * u_r + data_3d['pgas'] * g_rr
+    ttgas_rth = wgas * u_r * u_th
+    ttgas_rph = wgas * u_r * u_ph + data_3d['pgas'] * g_rph
+    ttgas_thth = wgas * u_th * u_th + data_3d['pgas'] * g_thth
+    ttgas_thph = wgas * u_th * u_ph
+    ttgas_phph = wgas * u_ph * u_ph + data_3d['pgas'] * g_phph
+    data_3d['Tgas_rph_f'] = ft_rave * ft_phave * ttgas_tt + (ft_rave * fr_phave + fr_rave * ft_phave) * ttgas_tr + (ft_rave * fth_phave + fth_rave * ft_phave) * ttgas_tth + (ft_rave * fph_phave + fph_rave * ft_phave) * ttgas_tph + fr_rave * fr_phave * ttgas_rr + (fr_rave * fth_phave + fth_rave * fr_phave) * ttgas_rth + (fr_rave * fph_phave + fph_rave * fr_phave) * ttgas_rph + fth_rave * fth_phave * ttgas_thth + (fth_rave * fph_phave + fph_rave * fth_phave) * ttgas_thph + fph_rave * fph_phave * ttgas_phph
+    data_3d['Tgas_thph_f'] = ft_thave * ft_phave * ttgas_tt + (ft_thave * fr_phave + fr_thave * ft_phave) * ttgas_tr + (ft_thave * fth_phave + fth_thave * ft_phave) * ttgas_tth + (ft_thave * fph_phave + fph_thave * ft_phave) * ttgas_tph + fr_thave * fr_phave * ttgas_rr + (fr_thave * fth_phave + fth_thave * fr_phave) * ttgas_rth + (fr_thave * fph_phave + fph_thave * fr_phave) * ttgas_rph + fth_thave * fth_phave * ttgas_thth + (fth_thave * fph_phave + fph_thave * fth_phave) * ttgas_thph + fph_thave * fph_phave * ttgas_phph
 
     # Average quantities in azimuth
     if frame_n == 0:
       data_2d = {}
-    data_2d['rho'] = np.mean(data_3d['rho'], axis=0)
-
-    # TODO: Calculate post-averaging derived quantities
+    for quantity in quantities_to_average:
+      data_2d[quantity] = np.mean(data_3d[quantity], axis=0)
 
     # Save results
     data_out = {}
     data_out['rf'] = rf
-    data_out['r'] = r
+    data_out['r'] = r[0,0,:]
     data_out['thf'] = thf
-    data_out['th'] = th
+    data_out['th'] = th[0,:,0]
     data_out['phf'] = phf
-    data_out['ph'] = ph
-    data_out['rho'] = data_2d['rho']
+    data_out['ph'] = ph[:,0,0]
+    for quantity in quantities_to_save:
+      data_out[quantity] = data_2d[quantity]
     np.savez(output_file, **data_out)
 
 # Process inputs and execute main function
@@ -352,5 +536,6 @@ if __name__ == '__main__':
   parser.add_argument('--lat_max', type=float, help='maximum latitude (degrees) grid extends away from midplane')
   parser.add_argument('--n_th', type=int, help='number of polar zones in output grid')
   parser.add_argument('--n_ph', type=int, help='number of azimuthal zones in 3D version of output grid')
+  parser.add_argument('--no_interp', action='store_true', help='flag indicating remapping should be done with nearest neighbors rather than interpolation')
   args = parser.parse_args()
   main(**vars(args))

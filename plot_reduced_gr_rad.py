@@ -46,14 +46,12 @@ def main(**kwargs):
     variable = data[kwargs['variable']]
   except KeyError:
     raise RuntimeError('{0} not in file.'.format(kwargs['variable']))
-  variable = np.vstack((variable, variable[::-1,:]))
 
   # Calculate grid
   rf = data['rf']
   thf = data['thf']
-  thf_ext = np.concatenate((thf, 2.0*np.pi - thf[-2::-1]))
-  xc = rf[None,:] * np.sin(thf_ext[:,None])
-  zc = rf[None,:] * np.cos(thf_ext[:,None])
+  xc = rf[None,:] * np.sin(thf[:,None])
+  zc = rf[None,:] * np.cos(thf[:,None])
 
   # Prepare figure
   plt.figure()
