@@ -63,7 +63,7 @@ def main(**kwargs):
   quantities_to_extract += ['bcc1', 'bcc2', 'bcc3']
   quantities_to_extract += ['r00', 'r01', 'r02', 'r03', 'r11', 'r12', 'r13', 'r22', 'r23', 'r33']
   quantities_to_extract += ['r00_ff']
-  quantities_to_average = ['rho', 'ugas', 'pgas', 'T_cgs']
+  quantities_to_average = ['rho', 'pgas', 'T_cgs']
   quantities_to_average += ['pmag', 'beta_inv', 'sigma']
   quantities_to_average += ['prad', 'prad_rho', 'prad_pgas', 'pmag_prad']
   quantities_to_average += ['pgas_ptot', 'pmag_ptot', 'prad_ptot']
@@ -73,8 +73,8 @@ def main(**kwargs):
   quantities_to_average += ['Tmag_rph_f', 'Tmag_thph_f']
   quantities_to_average += ['Tradtr', 'Tradtth', 'Trad_rph_f', 'Trad_thph_f']
   quantities_to_save = ['rho', 'ugas', 'pgas', 'T_cgs']
-  quantities_to_save += ['pmag', 'beta_inv', 'sigma']
-  quantities_to_save += ['prad', 'prad_rho', 'prad_pgas', 'pmag_prad']
+  quantities_to_save += ['umag', 'pmag', 'beta_inv', 'sigma']
+  quantities_to_save += ['urad', 'prad', 'prad_rho', 'prad_pgas', 'pmag_prad']
   quantities_to_save += ['pgas_ptot', 'pmag_ptot', 'prad_ptot']
   quantities_to_save += ['uut', 'ut', 'ur', 'uth', 'uph', 'vx', 'vy', 'vz']
   quantities_to_save += ['Br', 'Bth', 'Bph']
@@ -794,6 +794,11 @@ def main(**kwargs):
       data_2d = {}
     for quantity in quantities_to_average:
       data_2d[quantity] = np.mean(data_3d[quantity], axis=0)
+
+    # Calculate pre-averaging derived quantities
+    data_2d['ugas'] = data_2d['pgas'] / (gamma_adi - 1.0)
+    data_2d['umag'] = data_2d['pmag']
+    data_2d['urad'] = 3.0 * data_2d['prad']
 
     # Save results
     data_out = {}
