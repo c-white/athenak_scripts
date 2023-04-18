@@ -802,6 +802,7 @@ def main(**kwargs):
 
     # Save results
     data_out = {}
+    data_out['a'] = a
     data_out['rf'] = rf
     data_out['r'] = r[0,0,:]
     data_out['thf'] = thf
