@@ -57,7 +57,7 @@ import numpy as np
 def main(**kwargs):
 
   # Parameters - fixed
-  cells_per_decade = 10.0
+  cells_per_decade = 32.0
   r_square = 10.0
   quantities_to_extract = ['dens', 'eint', 'velx', 'vely', 'velz']
   quantities_to_extract += ['bcc1', 'bcc2', 'bcc3']
@@ -67,7 +67,7 @@ def main(**kwargs):
   quantities_to_average += ['pmag', 'beta_inv', 'sigma']
   quantities_to_average += ['prad', 'prad_rho', 'prad_pgas', 'pmag_prad']
   quantities_to_average += ['pgas_ptot', 'pmag_ptot', 'prad_ptot']
-  quantities_to_average += ['uut', 'ut', 'ur', 'uth', 'uph', 'vx', 'vy', 'vz']
+  quantities_to_average += ['uut', 'ut', 'ur', 'uth', 'uph', 'vr', 'vth', 'vph']
   quantities_to_average += ['Br', 'Bth', 'Bph']
   quantities_to_average += ['Tgas_rph_f', 'Tgas_thph_f']
   quantities_to_average += ['Tmag_rph_f', 'Tmag_thph_f']
@@ -76,7 +76,7 @@ def main(**kwargs):
   quantities_to_save += ['umag', 'pmag', 'beta_inv', 'sigma']
   quantities_to_save += ['urad', 'prad', 'prad_rho', 'prad_pgas', 'pmag_prad']
   quantities_to_save += ['pgas_ptot', 'pmag_ptot', 'prad_ptot']
-  quantities_to_save += ['uut', 'ut', 'ur', 'uth', 'uph', 'vx', 'vy', 'vz']
+  quantities_to_save += ['uut', 'ut', 'ur', 'uth', 'uph', 'vr', 'vth', 'vph']
   quantities_to_save += ['Br', 'Bth', 'Bph']
   quantities_to_save += ['Tgas_rph_f', 'Tgas_thph_f']
   quantities_to_save += ['Tmag_rph_f', 'Tmag_thph_f']
@@ -284,6 +284,8 @@ def main(**kwargs):
         r_max = min(-x1_min, x1_max, -x2_min, x2_max, -x3_min, x3_max)
       if n_r is None:
         n_r = int(round(np.log10(r_max / r_min) * cells_per_decade))
+      else:
+        cells_per_decade = n_r / np.log10(r_max / r_min)
       if lat_max is None:
         th_min = 0.0
         th_max = np.pi
@@ -644,9 +646,9 @@ def main(**kwargs):
       warnings.filterwarnings('ignore', 'invalid value encountered in sqrt', RuntimeWarning)
       data_3d['pgas'] = (gamma_adi - 1.0) * data_3d['ugas']
       data_3d['T_cgs'] = mu * mp_cgs * c_cgs ** 2 / kb_cgs * data_3d['pgas'] / data_3d['rho']
-      data_3d['vx'] = data_3d['ux'] / data_3d['ut']
-      data_3d['vy'] = data_3d['uy'] / data_3d['ut']
-      data_3d['vz'] = data_3d['uz'] / data_3d['ut']
+      data_3d['vr'] = data_3d['ur'] / data_3d['ut']
+      data_3d['vth'] = data_3d['uth'] / data_3d['ut']
+      data_3d['vph'] = data_3d['uph'] / data_3d['ut']
       data_3d['pmag'] = 0.5 * (b_t * bt + b_r * br + b_th * bth + b_ph * bph)
       data_3d['beta_inv'] = data_3d['pmag'] / data_3d['pgas']
       data_3d['sigma'] = 2.0 * data_3d['pmag'] / data_3d['rho']
