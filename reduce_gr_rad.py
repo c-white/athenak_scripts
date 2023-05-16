@@ -77,13 +77,11 @@ def main(**kwargs):
   quantities_to_average += ['acc_r_pgas', 'acc_r_pmag', 'acc_r_prad']
   quantities_to_average += ['acc_r_tens', 'acc_r_visc']
   quantities_to_average += ['acc_r_grav', 'acc_r_cent', 'acc_r_gr']
-  quantities_to_average += ['acc_r_pgas_other', 'acc_r_pmag_other', 'acc_r_prad_other']
   quantities_to_average += ['acc_r_mag_other', 'acc_r_rad_other']
   quantities_to_average += ['acc_th_tot']
   quantities_to_average += ['acc_th_pgas', 'acc_th_pmag', 'acc_th_prad']
   quantities_to_average += ['acc_th_tens', 'acc_th_visc']
   quantities_to_average += ['acc_th_cent', 'acc_th_gr']
-  quantities_to_average += ['acc_th_pgas_other', 'acc_th_pmag_other', 'acc_th_prad_other']
   quantities_to_average += ['acc_th_mag_other', 'acc_th_rad_other']
   quantities_to_average += ['Tgas_rph_f', 'Tgas_thph_f']
   quantities_to_average += ['Tmag_rph_f', 'Tmag_thph_f']
@@ -757,9 +755,9 @@ def main(**kwargs):
       # Calculate radial accelerations
       data_3d['acc_r_tot'] = (np.gradient(det * wtot * data_3d['ur'] * u_r, r[0,0,:], axis=2) \
           + np.gradient(det * wtot * data_3d['uth'] * u_r, th[0,:,0], axis=1)) / (det * wtot)
-      data_3d['acc_r_pgas'] = -np.gradient(det * data_3d['pgas'], r[0,0,:], axis=2) / (det * wtot)
-      data_3d['acc_r_pmag'] = -np.gradient(det * data_3d['pmag'], r[0,0,:], axis=2) / (det * wtot)
-      data_3d['acc_r_prad'] = -np.gradient(det * data_3d['prad'], r[0,0,:], axis=2) / (det * wtot)
+      data_3d['acc_r_pgas'] = -np.gradient(data_3d['pgas'], r[0,0,:], axis=2) / wtot
+      data_3d['acc_r_pmag'] = -np.gradient(data_3d['pmag'], r[0,0,:], axis=2) / wtot
+      data_3d['acc_r_prad'] = -np.gradient(data_3d['prad'], r[0,0,:], axis=2) / wtot
       data_3d['acc_r_tens'] = (np.gradient(det * br * b_r, r[0,0,:], axis=2) \
           + np.gradient(det * bth * b_r, th[0,:,0], axis=1)) / (det * wtot)
       data_3d['acc_r_visc'] = \
@@ -776,12 +774,6 @@ def main(**kwargs):
           + 2.0 * dr_g_rth * data_3d['ur'] * data_3d['uth'] \
           + 2.0 * dr_g_rph * data_3d['ur'] * data_3d['uph'] \
           + 2.0 * dr_g_thph * data_3d['uth'] * data_3d['uph'])
-      temp = dr_g_tt * gtt + 2.0 * dr_g_tr * gtr + 2.0 * dr_g_tth * gtth + 2.0 * dr_g_tph * gtph \
-          + dr_g_rr * grr + 2.0 * dr_g_rth * grth + 2.0 * dr_g_rph * grph + dr_g_thth * gthth \
-          + 2.0 * dr_g_thph * gthph + dr_g_phph * gphph
-      data_3d['acc_r_pgas_other'] = temp * data_3d['pgas'] / (2.0 * wtot)
-      data_3d['acc_r_pmag_other'] = temp * data_3d['pmag'] / (2.0 * wtot)
-      data_3d['acc_r_prad_other'] = temp * data_3d['prad'] / (2.0 * wtot)
       data_3d['acc_r_mag_other'] = -(dr_g_tt * bt ** 2 + 2.0 * dr_g_tr * bt * br \
           + 2.0 * dr_g_tth * bt * bth + 2.0 * dr_g_tph * bt * bph + dr_g_rr * br ** 2 \
           + 2.0 * dr_g_rth * br * bth + 2.0 * dr_g_rph * br * bph + dr_g_thth * bth ** 2 \
@@ -803,9 +795,9 @@ def main(**kwargs):
       # Calculate polar accelerations
       data_3d['acc_th_tot'] = (np.gradient(det * wtot * data_3d['ur'] * u_th, r[0,0,:], axis=2) \
           + np.gradient(det * wtot * data_3d['uth'] * u_th, th[0,:,0], axis=1)) / (det * wtot)
-      data_3d['acc_th_pgas'] = -np.gradient(det * data_3d['pgas'], th[0,:,0], axis=1) / (det * wtot)
-      data_3d['acc_th_pmag'] = -np.gradient(det * data_3d['pmag'], th[0,:,0], axis=1) / (det * wtot)
-      data_3d['acc_th_prad'] = -np.gradient(det * data_3d['prad'], th[0,:,0], axis=1) / (det * wtot)
+      data_3d['acc_th_pgas'] = -np.gradient(data_3d['pgas'], th[0,:,0], axis=1) / wtot
+      data_3d['acc_th_pmag'] = -np.gradient(data_3d['pmag'], th[0,:,0], axis=1) / wtot
+      data_3d['acc_th_prad'] = -np.gradient(data_3d['prad'], th[0,:,0], axis=1) / wtot
       data_3d['acc_th_tens'] = (np.gradient(det * br * b_th, r[0,0,:], axis=2) \
           + np.gradient(det * bth * b_th, th[0,:,0], axis=1)) / (det * wtot)
       data_3d['acc_th_visc'] = \
@@ -820,13 +812,6 @@ def main(**kwargs):
           + 2.0 * dth_g_rth * data_3d['ur'] * data_3d['uth'] \
           + 2.0 * dth_g_rph * data_3d['ur'] * data_3d['uph'] \
           + 2.0 * dth_g_thph * data_3d['uth'] * data_3d['uph'])
-      temp = dth_g_tt * gtt + 2.0 * dth_g_tr * gtr + 2.0 * dth_g_tth * gtth \
-          + 2.0 * dth_g_tph * gtph + dth_g_rr * grr + 2.0 * dth_g_rth * grth \
-          + 2.0 * dth_g_rph * grph + dth_g_thth * gthth + 2.0 * dth_g_thph * gthph \
-          + dth_g_phph * gphph
-      data_3d['acc_th_pgas_other'] = temp * data_3d['pgas'] / (2.0 * wtot)
-      data_3d['acc_th_pmag_other'] = temp * data_3d['pmag'] / (2.0 * wtot)
-      data_3d['acc_th_prad_other'] = temp * data_3d['prad'] / (2.0 * wtot)
       data_3d['acc_th_mag_other'] = -(dth_g_tt * bt ** 2 + 2.0 * dth_g_tr * bt * br \
           + 2.0 * dth_g_tth * bt * bth + 2.0 * dth_g_tph * bt * bph + dth_g_rr * br ** 2 \
           + 2.0 * dth_g_rth * br * bth + 2.0 * dth_g_rph * br * bph + dth_g_thth * bth ** 2 \
