@@ -59,28 +59,33 @@ def main(**kwargs):
   # Parameters - fixed
   cells_per_decade = 32.0
   r_square = 10.0
+
+  # Parameters - quantities to extract
   quantities_to_extract = ['dens', 'eint', 'velx', 'vely', 'velz']
   quantities_to_extract += ['bcc1', 'bcc2', 'bcc3']
   quantities_to_extract += ['r00', 'r01', 'r02', 'r03', 'r11', 'r12', 'r13', 'r22', 'r23', 'r33']
   quantities_to_extract += ['r00_ff']
+
+  # Parameters - quantities to average
   quantities_to_average = ['rho', 'pgas', 'T_cgs']
   quantities_to_average += ['pmag', 'beta_inv', 'sigma']
   quantities_to_average += ['prad', 'prad_rho', 'prad_pgas', 'pmag_prad']
   quantities_to_average += ['pgas_ptot', 'pmag_ptot', 'prad_ptot']
   quantities_to_average += ['uut', 'ut', 'ur', 'uth', 'uph', 'vr', 'vth', 'vph']
   quantities_to_average += ['Br', 'Bth', 'Bph']
+  quantities_to_average += ['acc_r_tot']
+  quantities_to_average += ['acc_r_pgas', 'acc_r_pmag', 'acc_r_prad']
+  quantities_to_average += ['acc_r_tens', 'acc_r_visc']
+  quantities_to_average += ['acc_r_grav', 'acc_r_cent', 'acc_r_gr']
+  quantities_to_average += ['acc_r_pgas_other', 'acc_r_pmag_other', 'acc_r_prad_other']
+  quantities_to_average += ['acc_r_mag_other', 'acc_r_rad_other']
   quantities_to_average += ['Tgas_rph_f', 'Tgas_thph_f']
   quantities_to_average += ['Tmag_rph_f', 'Tmag_thph_f']
   quantities_to_average += ['Tradtr', 'Tradtth', 'Trad_rph_f', 'Trad_thph_f']
-  quantities_to_save = ['rho', 'ugas', 'pgas', 'T_cgs']
-  quantities_to_save += ['umag', 'pmag', 'beta_inv', 'sigma']
-  quantities_to_save += ['urad', 'prad', 'prad_rho', 'prad_pgas', 'pmag_prad']
-  quantities_to_save += ['pgas_ptot', 'pmag_ptot', 'prad_ptot']
-  quantities_to_save += ['uut', 'ut', 'ur', 'uth', 'uph', 'vr', 'vth', 'vph']
-  quantities_to_save += ['Br', 'Bth', 'Bph']
-  quantities_to_save += ['Tgas_rph_f', 'Tgas_thph_f']
-  quantities_to_save += ['Tmag_rph_f', 'Tmag_thph_f']
-  quantities_to_save += ['Tradtr', 'Tradtth', 'Trad_rph_f', 'Trad_thph_f']
+
+  # Parameters - quantities to save
+  quantities_to_save = list(quantities_to_average)
+  quantities_to_save += ['ugas', 'umag', 'urad']
 
   # Parameters - inputs
   input_file_base = kwargs['input_file_base']
@@ -406,13 +411,19 @@ def main(**kwargs):
       y2 = y ** 2
       z2 = z ** 2
 
-    # Calculate SKS metric
+    # Calculate SKS quantities
     if frame_n == 0:
       sth2 = sth ** 2
       cth2 = cth ** 2
       delta = r2 - 2.0 * r + a2
       sigma = r2 + a2 * cth2
+      sigma2 = sigma ** 2
+      sigma_alt = r2 - a2 * cth2
       f = 2.0 * r / sigma
+      det = sigma * sth
+
+    # Calculate SKS covariant metric
+    if frame_n == 0:
       g_tt = -(1.0 - f)
       g_tr = f
       g_tth = 0.0
@@ -423,27 +434,56 @@ def main(**kwargs):
       g_thth = sigma
       g_thph = 0.0
       g_phph = (r2 + a2 + a2 * f * sth2) * sth2
+
+    # Calculate SKS covariant metric derivatives
+    if frame_n == 0:
+      dr_g_tt = -2.0 * sigma_alt / sigma2
+      dr_g_tr = -2.0 * sigma_alt / sigma2
+      dr_g_tth = 0.0
+      dr_g_tph = 2.0 * sigma_alt / sigma2 * a * sth2
+      dr_g_rr = -2.0 * sigma_alt / sigma2
+      dr_g_rth = 0.0
+      dr_g_rph = 2.0 * sigma_alt / sigma2 * a * sth2
+      dr_g_thth = 2.0 * r
+      dr_g_thph = 0.0
+      dr_g_phph = 2.0 * (r - sigma_alt / sigma2 * a2 * sth2) * sth2
+
+    # Calculate SKS contravariant metric
+    if frame_n == 0:
       gtt = -(1.0 + f)
       gtr = f
+      gtth = 0.0
+      gtph = 0.0
       grr = delta / sigma
+      grth = 0.0
       grph = a / sigma
       gthth = 1.0 / sigma
+      gthph = 0.0
       gphph = 1.0 / (sigma * sth2)
 
-    # Calculate CKS metric
+    # Calculate CKS quantities
     if frame_n == 0:
       lx = (r * x + a * y) / (r2 + a2)
       ly = (r * y - a * x) / (r2 + a2)
       lz = z / r
+
+    # Calculate CKS covariant metric
+    if frame_n == 0:
       g_xx = f * lx * lx + 1.0
       g_xy = f * lx * ly
       g_xz = f * lx * lz
       g_yy = f * ly * ly + 1.0
       g_yz = f * ly * lz
       g_zz = f * lz * lz + 1.0
+
+    # Calculate CKS contravariant metric
+    if frame_n == 0:
       gtx = f * lx
       gty = f * ly
       gtz = f * lz
+
+    # Calculate CKS lapse and shift
+    if frame_n == 0:
       alpha_coord = 1.0 / np.sqrt(-gtt)
       betax = -gtx / gtt
       betay = -gty / gtt
@@ -487,7 +527,7 @@ def main(**kwargs):
     data_3d['Tradyz'] = data_3d['r23']
     data_3d['Tradzz'] = data_3d['r33']
 
-    # Convert data to SKS components
+    # Calculate velocities in CKS components
     data_3d['uut'] = np.sqrt(1.0 + g_xx * data_3d['uux'] ** 2 \
         + 2.0 * g_xy * data_3d['uux'] * data_3d['uuy'] \
         + 2.0 * g_xz * data_3d['uux'] * data_3d['uuz'] + g_yy * data_3d['uuy'] ** 2 \
@@ -496,6 +536,8 @@ def main(**kwargs):
     data_3d['ux'] = data_3d['uux'] - betax * data_3d['ut']
     data_3d['uy'] = data_3d['uuy'] - betay * data_3d['ut']
     data_3d['uz'] = data_3d['uuz'] - betaz * data_3d['ut']
+
+    # Calculate velocities in SKS components
     data_3d['ur'] = dr_dx * data_3d['ux'] + dr_dy * data_3d['uy'] + dr_dz * data_3d['uz']
     data_3d['uth'] = dth_dx * data_3d['ux'] + dth_dy * data_3d['uy'] + dth_dz * data_3d['uz']
     data_3d['uph'] = dph_dx * data_3d['ux'] + dph_dy * data_3d['uy'] + dph_dz * data_3d['uz']
@@ -503,6 +545,8 @@ def main(**kwargs):
     u_r = g_tr * data_3d['ut'] + g_rr * data_3d['ur'] + g_rph * data_3d['uph']
     u_th = g_thth * data_3d['uth']
     u_ph = g_tph * data_3d['ut'] + g_rph * data_3d['ur'] + g_phph * data_3d['uph']
+
+    # Calculate magnetic fields in SKS components
     data_3d['Br'] = dr_dx * data_3d['Bx'] + dr_dy * data_3d['By'] + dr_dz * data_3d['Bz']
     data_3d['Bth'] = dth_dx * data_3d['Bx'] + dth_dy * data_3d['By'] + dth_dz * data_3d['Bz']
     data_3d['Bph'] = dph_dx * data_3d['Bx'] + dph_dy * data_3d['By'] + dph_dz * data_3d['Bz']
@@ -514,6 +558,8 @@ def main(**kwargs):
     b_r = g_tr * bt + g_rr * br + g_rph * bph
     b_th = g_thth * bth
     b_ph = g_tph * bt + g_rph * br + g_phph * bph
+
+    # Calculate contravariant radiation stress-energy tensor in SKS components
     data_3d['Tradtr'] = \
         dr_dx * data_3d['Tradtx'] + dr_dy * data_3d['Tradty'] + dr_dz * data_3d['Tradtz']
     data_3d['Tradtth'] = \
@@ -552,6 +598,8 @@ def main(**kwargs):
         + dph_dy * dph_dy * data_3d['Tradyy'] \
         + (dph_dy * dph_dz + dph_dz * dph_dy) * data_3d['Tradyz'] \
         + dph_dz * dph_dz * data_3d['Tradzz']
+
+    # Calculate covariant radiation stress-energy tensor in SKS components
     ttrad_tt = g_tt * g_tt * data_3d['Tradtt'] + (g_tt * g_tr + g_tr * g_tt) * data_3d['Tradtr'] \
         + (g_tt * g_tth + g_tth * g_tt) * data_3d['Tradtth'] \
         + (g_tt * g_tph + g_tph * g_tt) * data_3d['Tradtph'] + g_tr * g_tr * data_3d['Tradrr'] \
@@ -642,24 +690,100 @@ def main(**kwargs):
 
     # Calculate pre-averaging derived quantities
     with warnings.catch_warnings():
+
+      # Ignore warnings
       warnings.filterwarnings('ignore', 'invalid value encountered in true_divide', RuntimeWarning)
       warnings.filterwarnings('ignore', 'invalid value encountered in sqrt', RuntimeWarning)
+
+      # Calculate gas quantities
       data_3d['pgas'] = (gamma_adi - 1.0) * data_3d['ugas']
       data_3d['T_cgs'] = mu * mp_cgs * c_cgs ** 2 / kb_cgs * data_3d['pgas'] / data_3d['rho']
       data_3d['vr'] = data_3d['ur'] / data_3d['ut']
       data_3d['vth'] = data_3d['uth'] / data_3d['ut']
       data_3d['vph'] = data_3d['uph'] / data_3d['ut']
+
+      # Calculate magnetic quantities
       data_3d['pmag'] = 0.5 * (b_t * bt + b_r * br + b_th * bth + b_ph * bph)
       data_3d['beta_inv'] = data_3d['pmag'] / data_3d['pgas']
       data_3d['sigma'] = 2.0 * data_3d['pmag'] / data_3d['rho']
+
+      # Calculate radiation quantities
       data_3d['prad'] = 1.0/3.0 * data_3d['urad']
       data_3d['prad_rho'] = data_3d['prad'] / data_3d['rho']
+
+      # Calculate pressures
       data_3d['prad_pgas'] = data_3d['prad'] / data_3d['pgas']
       data_3d['pmag_prad'] = data_3d['pmag'] / data_3d['prad']
       ptot = data_3d['pgas'] + data_3d['pmag'] + data_3d['prad']
       data_3d['pgas_ptot'] = data_3d['pgas'] / ptot
       data_3d['pmag_ptot'] = data_3d['pmag'] / ptot
       data_3d['prad_ptot'] = data_3d['prad'] / ptot
+
+      # Calculate enthalpies
+      wgas = data_3d['rho'] + data_3d['ugas'] + data_3d['pgas']
+      wtot = wgas + 2.0 * data_3d['pmag'] + 4.0 * data_3d['prad']
+
+      # Calculate radiation fluxes
+      fradt = (data_3d['Tradtt'] - (data_3d['urad'] + data_3d['prad']) * data_3d['ut'] ** 2 \
+          - data_3d['prad'] * gtt) / (2.0 * data_3d['ut'])
+      fradr = (data_3d['Tradtr'] \
+          - (data_3d['urad'] + data_3d['prad']) * data_3d['ut'] * data_3d['ur'] \
+          - data_3d['prad'] * gtr - fradt * data_3d['ur']) / data_3d['ut']
+      fradth = (data_3d['Tradtth'] - (data_3d['urad'] \
+          + data_3d['prad']) * data_3d['ut'] * data_3d['uth'] - data_3d['prad'] * gtth \
+          - fradt * data_3d['uth']) / data_3d['ut']
+      fradph = (data_3d['Tradtph'] - (data_3d['urad'] \
+          + data_3d['prad']) * data_3d['ut'] * data_3d['uph'] - data_3d['prad'] * gtph \
+          - fradt * data_3d['uph']) / data_3d['ut']
+      frad_r = g_tr * fradt + g_rr * fradr + g_rth * fradth + g_rph * fradph
+
+      # Calculate accelerations
+      data_3d['acc_r_tot'] = (np.gradient(det * wtot * data_3d['ur'] * u_r, r[0,0,:], axis=2) \
+          + np.gradient(det * wtot * data_3d['uth'] * u_r, th[0,:,0], axis=1)) / (det * wtot)
+      data_3d['acc_r_pgas'] = -np.gradient(det * data_3d['pgas'], r[0,0,:], axis=2) / (det * wtot)
+      data_3d['acc_r_pmag'] = -np.gradient(det * data_3d['pmag'], r[0,0,:], axis=2) / (det * wtot)
+      data_3d['acc_r_prad'] = -np.gradient(det * data_3d['prad'], r[0,0,:], axis=2) / (det * wtot)
+      data_3d['acc_r_tens'] = (np.gradient(det * br * b_r, r[0,0,:], axis=2) \
+          + np.gradient(det * bth * b_r, th[0,:,0], axis=1)) / (det * wtot)
+      data_3d['acc_r_visc'] = \
+          -(np.gradient(det * (fradr * u_r + data_3d['ur'] * frad_r), r[0,0,:], axis=2) \
+          + np.gradient(det * (fradth * u_r + data_3d['uth'] * frad_r), th[0,:,0], axis=1)) \
+          / (det * wtot)
+      data_3d['acc_r_grav'] = 0.5 * dr_g_tt * data_3d['ut'] ** 2
+      data_3d['acc_r_cent'] = \
+          0.5 * (dr_g_thth * data_3d['uth'] ** 2 + dr_g_phph * data_3d['uph'] ** 2)
+      data_3d['acc_r_gr'] = 0.5 * (dr_g_rr * data_3d['ur'] ** 2 \
+          + 2.0 * dr_g_tr * data_3d['ut'] * data_3d['ur'] \
+          + 2.0 * dr_g_tth * data_3d['ut'] * data_3d['uth'] \
+          + 2.0 * dr_g_tph * data_3d['ut'] * data_3d['uph'] \
+          + 2.0 * dr_g_rth * data_3d['ur'] * data_3d['uth'] \
+          + 2.0 * dr_g_rph * data_3d['ur'] * data_3d['uph'] \
+          + 2.0 * dr_g_thph * data_3d['uth'] * data_3d['uph'])
+      temp = dr_g_tt * gtt + 2.0 * dr_g_tr * gtr + 2.0 * dr_g_tth * gtth + 2.0 * dr_g_tph * gtph \
+          + dr_g_rr * grr + 2.0 * dr_g_rth * grth + 2.0 * dr_g_rph * grph + dr_g_thth * gthth \
+          + 2.0 * dr_g_thph * gthph + dr_g_phph * gphph
+      data_3d['acc_r_pgas_other'] = temp * data_3d['pgas'] / (2.0 * wtot)
+      data_3d['acc_r_pmag_other'] = temp * data_3d['pmag'] / (2.0 * wtot)
+      data_3d['acc_r_prad_other'] = temp * data_3d['prad'] / (2.0 * wtot)
+      data_3d['acc_r_mag_other'] = -(dr_g_tt * bt ** 2 + 2.0 * dr_g_tr * bt * br \
+          + 2.0 * dr_g_tth * bt * bth + 2.0 * dr_g_tph * bt * bph + dr_g_rr * br ** 2 \
+          + 2.0 * dr_g_rth * br * bth + 2.0 * dr_g_rph * br * bph + dr_g_thth * bth ** 2 \
+          + 2.0 * dr_g_thph * bth * bph + dr_g_phph * bph ** 2) / (2.0 * wtot)
+      data_3d['acc_r_rad_other'] = dr_g_tt * fradt * data_3d['ut'] \
+          + dr_g_tr * fradt * data_3d['ur'] + dr_g_tth * fradt * data_3d['uth'] \
+          + dr_g_tph * fradt * data_3d['uph'] + dr_g_rr * fradr * data_3d['ur'] \
+          + dr_g_rth * fradr * data_3d['uth'] + dr_g_rph * fradr * data_3d['uph'] \
+          + dr_g_thth * fradth * data_3d['uth'] + dr_g_thph * fradth * data_3d['uph'] \
+          + dr_g_phph * fradph * data_3d['uph']
+      data_3d['acc_r_rad_other'] += dr_g_tt * data_3d['ut'] * fradt \
+          + 2.0 * dr_g_tr * data_3d['ut'] * fradr + 2.0 * dr_g_tth * data_3d['ut'] * fradth \
+          + 2.0 * dr_g_tph * data_3d['ut'] * fradph + dr_g_rr * data_3d['ur'] * fradr \
+          + 2.0 * dr_g_rth * data_3d['ur'] * fradth + 2.0 * dr_g_rph * data_3d['ur'] * fradph \
+          + dr_g_thth * data_3d['uth'] * fradth + 2.0 * dr_g_thph * data_3d['uth'] * fradph \
+          + dr_g_phph * data_3d['uph'] * fradph
+      data_3d['acc_r_rad_other'] /= 2.0 * wtot
+
+      # Calculate average velocities
       uaver = 0.0
       uaveth = 0.0
       uaveph = \
@@ -669,6 +793,8 @@ def main(**kwargs):
       uave_t = g_tt * uavet + g_tph * uaveph
       uave_r = g_tr * uavet + g_rph * uaveph
       uave_ph = g_tph * uavet + g_phph * uaveph
+
+      # Calculate transformation to fluid frame
       ft_tave = uavet
       fr_tave = 0.0
       fth_tave = 0.0
@@ -709,7 +835,8 @@ def main(**kwargs):
       fr_thave = sigma * sth * (gtr * levi_civita_t + grr * levi_civita_r + grph * levi_civita_ph)
       fth_thave = sigma * sth * gthth * levi_civita_th
       fph_thave = sigma * sth * (grph * levi_civita_r + gphph * levi_civita_ph)
-      wgas = data_3d['rho'] + data_3d['ugas'] + data_3d['pgas']
+
+      # Calculate covariant gas stress-energy tensor
       ttgas_tt = wgas * u_t * u_t + data_3d['pgas'] * g_tt
       ttgas_tr = wgas * u_t * u_r + data_3d['pgas'] * g_tr
       ttgas_tth = wgas * u_t * u_th
@@ -720,6 +847,8 @@ def main(**kwargs):
       ttgas_thth = wgas * u_th * u_th + data_3d['pgas'] * g_thth
       ttgas_thph = wgas * u_th * u_ph
       ttgas_phph = wgas * u_ph * u_ph + data_3d['pgas'] * g_phph
+
+      # Calculate gas Lagrangian stress
       data_3d['Tgas_rph_f'] = ft_rave * ft_phave * ttgas_tt \
           + (ft_rave * fr_phave + fr_rave * ft_phave) * ttgas_tr \
           + (ft_rave * fth_phave + fth_rave * ft_phave) * ttgas_tth \
@@ -740,6 +869,8 @@ def main(**kwargs):
           + fth_thave * fth_phave * ttgas_thth \
           + (fth_thave * fph_phave + fph_thave * fth_phave) * ttgas_thph \
           + fph_thave * fph_phave * ttgas_phph
+
+      # Calculate covariant magnetic stress-energy tensor
       ttmag_tt = 2.0 * data_3d['pmag'] * u_t * u_t + data_3d['pmag'] * g_tt - b_t * b_t
       ttmag_tr = 2.0 * data_3d['pmag'] * u_t * u_r + data_3d['pmag'] * g_tr - b_t * b_r
       ttmag_tth = 2.0 * data_3d['pmag'] * u_t * u_th - b_t * b_th
@@ -750,6 +881,8 @@ def main(**kwargs):
       ttmag_thth = 2.0 * data_3d['pmag'] * u_th * u_th + data_3d['pmag'] * g_thth - b_th * b_th
       ttmag_thph = 2.0 * data_3d['pmag'] * u_th * u_ph - b_th * b_ph
       ttmag_phph = 2.0 * data_3d['pmag'] * u_ph * u_ph + data_3d['pmag'] * g_phph - b_ph * b_ph
+
+      # Calculate magnetic Lagrangian stress
       data_3d['Tmag_rph_f'] = ft_rave * ft_phave * ttmag_tt \
           + (ft_rave * fr_phave + fr_rave * ft_phave) * ttmag_tr \
           + (ft_rave * fth_phave + fth_rave * ft_phave) * ttmag_tth \
@@ -770,6 +903,8 @@ def main(**kwargs):
           + fth_thave * fth_phave * ttmag_thth \
           + (fth_thave * fph_phave + fph_thave * fth_phave) * ttmag_thph \
           + fph_thave * fph_phave * ttmag_phph
+
+      # Calculate radiation Lagrangian stress
       data_3d['Trad_rph_f'] = ft_rave * ft_phave * ttrad_tt \
           + (ft_rave * fr_phave + fr_rave * ft_phave) * ttrad_tr \
           + (ft_rave * fth_phave + fth_rave * ft_phave) * ttrad_tth \
@@ -797,7 +932,7 @@ def main(**kwargs):
     for quantity in quantities_to_average:
       data_2d[quantity] = np.mean(data_3d[quantity], axis=0)
 
-    # Calculate pre-averaging derived quantities
+    # Calculate post-averaging derived quantities
     data_2d['ugas'] = data_2d['pgas'] / (gamma_adi - 1.0)
     data_2d['umag'] = data_2d['pmag']
     data_2d['urad'] = 3.0 * data_2d['prad']
