@@ -60,37 +60,6 @@ def main(**kwargs):
   cells_per_decade = 32.0
   r_square = 10.0
 
-  # Parameters - quantities to extract
-  quantities_to_extract = ['dens', 'eint', 'velx', 'vely', 'velz']
-  quantities_to_extract += ['bcc1', 'bcc2', 'bcc3']
-  quantities_to_extract += ['r00', 'r01', 'r02', 'r03', 'r11', 'r12', 'r13', 'r22', 'r23', 'r33']
-  quantities_to_extract += ['r00_ff']
-
-  # Parameters - quantities to average
-  quantities_to_average = ['rho', 'pgas', 'T_cgs']
-  quantities_to_average += ['pmag', 'beta_inv', 'sigma']
-  quantities_to_average += ['prad', 'prad_rho', 'prad_pgas', 'pmag_prad']
-  quantities_to_average += ['pgas_ptot', 'pmag_ptot', 'prad_ptot']
-  quantities_to_average += ['uut', 'ut', 'ur', 'uth', 'uph', 'vr', 'vth', 'vph']
-  quantities_to_average += ['Br', 'Bth', 'Bph']
-  quantities_to_average += ['acc_r_tot']
-  quantities_to_average += ['acc_r_pgas', 'acc_r_pmag', 'acc_r_prad']
-  quantities_to_average += ['acc_r_tens', 'acc_r_visc']
-  quantities_to_average += ['acc_r_grav', 'acc_r_cent', 'acc_r_gr']
-  quantities_to_average += ['acc_r_mag_other', 'acc_r_rad_other']
-  quantities_to_average += ['acc_th_tot']
-  quantities_to_average += ['acc_th_pgas', 'acc_th_pmag', 'acc_th_prad']
-  quantities_to_average += ['acc_th_tens', 'acc_th_visc']
-  quantities_to_average += ['acc_th_cent', 'acc_th_gr']
-  quantities_to_average += ['acc_th_mag_other', 'acc_th_rad_other']
-  quantities_to_average += ['Tgas_rph_f', 'Tgas_thph_f']
-  quantities_to_average += ['Tmag_rph_f', 'Tmag_thph_f']
-  quantities_to_average += ['Tradtr', 'Tradtth', 'Trad_rph_f', 'Trad_thph_f']
-
-  # Parameters - quantities to save
-  quantities_to_save = list(quantities_to_average)
-  quantities_to_save += ['ugas', 'umag', 'urad']
-
   # Parameters - inputs
   input_file_base = kwargs['input_file_base']
   output_file_base = kwargs['output_file_base']
@@ -104,6 +73,46 @@ def main(**kwargs):
   n_th = kwargs['n_th']
   n_ph = kwargs['n_ph']
   interp = not kwargs['no_interp']
+  include_rad = not kwargs['no_rad']
+
+  # Parameters - quantities to extract
+  quantities_to_extract = ['dens', 'eint', 'velx', 'vely', 'velz']
+  quantities_to_extract += ['bcc1', 'bcc2', 'bcc3']
+  if include_rad:
+    quantities_to_extract += ['r00', 'r01', 'r02', 'r03', 'r11', 'r12', 'r13', 'r22', 'r23', 'r33']
+    quantities_to_extract += ['r00_ff']
+
+  # Parameters - quantities to average
+  quantities_to_average = ['rho', 'pgas']
+  quantities_to_average += ['pmag', 'beta_inv', 'sigma']
+  quantities_to_average += ['pgas_ptot', 'pmag_ptot']
+  quantities_to_average += ['uut', 'ut', 'ur', 'uth', 'uph', 'vr', 'vth', 'vph']
+  quantities_to_average += ['Br', 'Bth', 'Bph']
+  quantities_to_average += ['acc_r_tot']
+  quantities_to_average += ['acc_r_pgas', 'acc_r_pmag']
+  quantities_to_average += ['acc_r_tens', 'acc_r_mag_other']
+  quantities_to_average += ['acc_r_grav', 'acc_r_cent', 'acc_r_gr']
+  quantities_to_average += ['acc_th_tot']
+  quantities_to_average += ['acc_th_pgas', 'acc_th_pmag']
+  quantities_to_average += ['acc_th_tens', 'acc_th_mag_other']
+  quantities_to_average += ['acc_th_cent', 'acc_th_gr']
+  quantities_to_average += ['Tgas_rph_f', 'Tgas_thph_f']
+  quantities_to_average += ['Tmag_rph_f', 'Tmag_thph_f']
+  if include_rad:
+    quantities_to_average += ['T_cgs']
+    quantities_to_average += ['prad', 'prad_rho', 'prad_pgas', 'pmag_prad']
+    quantities_to_average += ['prad_ptot']
+    quantities_to_average += ['acc_r_prad']
+    quantities_to_average += ['acc_r_visc', 'acc_r_rad_other']
+    quantities_to_average += ['acc_th_prad']
+    quantities_to_average += ['acc_th_visc', 'acc_th_rad_other']
+    quantities_to_average += ['Tradtr', 'Tradtth', 'Trad_rph_f', 'Trad_thph_f']
+
+  # Parameters - quantities to save
+  quantities_to_save = list(quantities_to_average)
+  quantities_to_save += ['ugas', 'umag']
+  if include_rad:
+    quantities_to_save += ['urad']
 
   # Parameters - physical units
   c_cgs = 2.99792458e10
@@ -224,7 +233,7 @@ def main(**kwargs):
           raise RuntimeError('Unable to find adiabatic index in input file.')
 
       # Extract molecular weight from input file metadata
-      if frame_n == 0:
+      if include_rad and frame_n == 0:
         try:
           mu = float(input_data['units']['mu'])
         except:
@@ -529,17 +538,18 @@ def main(**kwargs):
     data_3d['Bx'] = data_3d['bcc1']
     data_3d['By'] = data_3d['bcc2']
     data_3d['Bz'] = data_3d['bcc3']
-    data_3d['urad'] = data_3d['r00_ff']
-    data_3d['Tradtt'] = data_3d['r00']
-    data_3d['Tradtx'] = data_3d['r01']
-    data_3d['Tradty'] = data_3d['r02']
-    data_3d['Tradtz'] = data_3d['r03']
-    data_3d['Tradxx'] = data_3d['r11']
-    data_3d['Tradxy'] = data_3d['r12']
-    data_3d['Tradxz'] = data_3d['r13']
-    data_3d['Tradyy'] = data_3d['r22']
-    data_3d['Tradyz'] = data_3d['r23']
-    data_3d['Tradzz'] = data_3d['r33']
+    if include_rad:
+      data_3d['urad'] = data_3d['r00_ff']
+      data_3d['Tradtt'] = data_3d['r00']
+      data_3d['Tradtx'] = data_3d['r01']
+      data_3d['Tradty'] = data_3d['r02']
+      data_3d['Tradtz'] = data_3d['r03']
+      data_3d['Tradxx'] = data_3d['r11']
+      data_3d['Tradxy'] = data_3d['r12']
+      data_3d['Tradxz'] = data_3d['r13']
+      data_3d['Tradyy'] = data_3d['r22']
+      data_3d['Tradyz'] = data_3d['r23']
+      data_3d['Tradzz'] = data_3d['r33']
 
     # Calculate velocities in CKS components
     data_3d['uut'] = np.sqrt(1.0 + g_xx * data_3d['uux'] ** 2 \
@@ -574,133 +584,145 @@ def main(**kwargs):
     b_ph = g_tph * bt + g_rph * br + g_phph * bph
 
     # Calculate contravariant radiation stress-energy tensor in SKS components
-    data_3d['Tradtr'] = \
-        dr_dx * data_3d['Tradtx'] + dr_dy * data_3d['Tradty'] + dr_dz * data_3d['Tradtz']
-    data_3d['Tradtth'] = \
-        dth_dx * data_3d['Tradtx'] + dth_dy * data_3d['Tradty'] + dth_dz * data_3d['Tradtz']
-    data_3d['Tradtph'] = \
-        dph_dx * data_3d['Tradtx'] + dph_dy * data_3d['Tradty'] + dph_dz * data_3d['Tradtz']
-    data_3d['Tradrr'] = dr_dx * dr_dx * data_3d['Tradxx'] \
-        + (dr_dx * dr_dy + dr_dy * dr_dx) * data_3d['Tradxy'] \
-        + (dr_dx * dr_dz + dr_dz * dr_dx) * data_3d['Tradxz'] + dr_dy * dr_dy * data_3d['Tradyy'] \
-        + (dr_dy * dr_dz + dr_dz * dr_dy) * data_3d['Tradyz'] + dr_dz * dr_dz * data_3d['Tradzz']
-    data_3d['Tradrth'] = dr_dx * dth_dx * data_3d['Tradxx'] \
-        + (dr_dx * dth_dy + dr_dy * dth_dx) * data_3d['Tradxy'] \
-        + (dr_dx * dth_dz + dr_dz * dth_dx) * data_3d['Tradxz'] \
-        + dr_dy * dth_dy * data_3d['Tradyy'] \
-        + (dr_dy * dth_dz + dr_dz * dth_dy) * data_3d['Tradyz'] + dr_dz * dth_dz * data_3d['Tradzz']
-    data_3d['Tradrph'] = dr_dx * dph_dx * data_3d['Tradxx'] \
-        + (dr_dx * dph_dy + dr_dy * dph_dx) * data_3d['Tradxy'] \
-        + (dr_dx * dph_dz + dr_dz * dph_dx) * data_3d['Tradxz'] \
-        + dr_dy * dph_dy * data_3d['Tradyy'] \
-        + (dr_dy * dph_dz + dr_dz * dph_dy) * data_3d['Tradyz'] + dr_dz * dph_dz * data_3d['Tradzz']
-    data_3d['Tradthth'] = dth_dx * dth_dx * data_3d['Tradxx'] \
-        + (dth_dx * dth_dy + dth_dy * dth_dx) * data_3d['Tradxy'] \
-        + (dth_dx * dth_dz + dth_dz * dth_dx) * data_3d['Tradxz'] \
-        + dth_dy * dth_dy * data_3d['Tradyy'] \
-        + (dth_dy * dth_dz + dth_dz * dth_dy) * data_3d['Tradyz'] \
-        + dth_dz * dth_dz * data_3d['Tradzz']
-    data_3d['Tradthph'] = dth_dx * dph_dx * data_3d['Tradxx'] \
-        + (dth_dx * dph_dy + dth_dy * dph_dx) * data_3d['Tradxy'] \
-        + (dth_dx * dph_dz + dth_dz * dph_dx) * data_3d['Tradxz'] \
-        + dth_dy * dph_dy * data_3d['Tradyy'] \
-        + (dth_dy * dph_dz + dth_dz * dph_dy) * data_3d['Tradyz'] \
-        + dth_dz * dph_dz * data_3d['Tradzz']
-    data_3d['Tradphph'] = dph_dx * dph_dx * data_3d['Tradxx'] \
-        + (dph_dx * dph_dy + dph_dy * dph_dx) * data_3d['Tradxy'] \
-        + (dph_dx * dph_dz + dph_dz * dph_dx) * data_3d['Tradxz'] \
-        + dph_dy * dph_dy * data_3d['Tradyy'] \
-        + (dph_dy * dph_dz + dph_dz * dph_dy) * data_3d['Tradyz'] \
-        + dph_dz * dph_dz * data_3d['Tradzz']
+    if include_rad:
+      data_3d['Tradtr'] = \
+          dr_dx * data_3d['Tradtx'] + dr_dy * data_3d['Tradty'] + dr_dz * data_3d['Tradtz']
+      data_3d['Tradtth'] = \
+          dth_dx * data_3d['Tradtx'] + dth_dy * data_3d['Tradty'] + dth_dz * data_3d['Tradtz']
+      data_3d['Tradtph'] = \
+          dph_dx * data_3d['Tradtx'] + dph_dy * data_3d['Tradty'] + dph_dz * data_3d['Tradtz']
+      data_3d['Tradrr'] = dr_dx * dr_dx * data_3d['Tradxx'] \
+          + (dr_dx * dr_dy + dr_dy * dr_dx) * data_3d['Tradxy'] \
+          + (dr_dx * dr_dz + dr_dz * dr_dx) * data_3d['Tradxz'] \
+          + dr_dy * dr_dy * data_3d['Tradyy'] \
+          + (dr_dy * dr_dz + dr_dz * dr_dy) * data_3d['Tradyz'] + dr_dz * dr_dz * data_3d['Tradzz']
+      data_3d['Tradrth'] = dr_dx * dth_dx * data_3d['Tradxx'] \
+          + (dr_dx * dth_dy + dr_dy * dth_dx) * data_3d['Tradxy'] \
+          + (dr_dx * dth_dz + dr_dz * dth_dx) * data_3d['Tradxz'] \
+          + dr_dy * dth_dy * data_3d['Tradyy'] \
+          + (dr_dy * dth_dz + dr_dz * dth_dy) * data_3d['Tradyz'] \
+          + dr_dz * dth_dz * data_3d['Tradzz']
+      data_3d['Tradrph'] = dr_dx * dph_dx * data_3d['Tradxx'] \
+          + (dr_dx * dph_dy + dr_dy * dph_dx) * data_3d['Tradxy'] \
+          + (dr_dx * dph_dz + dr_dz * dph_dx) * data_3d['Tradxz'] \
+          + dr_dy * dph_dy * data_3d['Tradyy'] \
+          + (dr_dy * dph_dz + dr_dz * dph_dy) * data_3d['Tradyz'] \
+          + dr_dz * dph_dz * data_3d['Tradzz']
+      data_3d['Tradthth'] = dth_dx * dth_dx * data_3d['Tradxx'] \
+          + (dth_dx * dth_dy + dth_dy * dth_dx) * data_3d['Tradxy'] \
+          + (dth_dx * dth_dz + dth_dz * dth_dx) * data_3d['Tradxz'] \
+          + dth_dy * dth_dy * data_3d['Tradyy'] \
+          + (dth_dy * dth_dz + dth_dz * dth_dy) * data_3d['Tradyz'] \
+          + dth_dz * dth_dz * data_3d['Tradzz']
+      data_3d['Tradthph'] = dth_dx * dph_dx * data_3d['Tradxx'] \
+          + (dth_dx * dph_dy + dth_dy * dph_dx) * data_3d['Tradxy'] \
+          + (dth_dx * dph_dz + dth_dz * dph_dx) * data_3d['Tradxz'] \
+          + dth_dy * dph_dy * data_3d['Tradyy'] \
+          + (dth_dy * dph_dz + dth_dz * dph_dy) * data_3d['Tradyz'] \
+          + dth_dz * dph_dz * data_3d['Tradzz']
+      data_3d['Tradphph'] = dph_dx * dph_dx * data_3d['Tradxx'] \
+          + (dph_dx * dph_dy + dph_dy * dph_dx) * data_3d['Tradxy'] \
+          + (dph_dx * dph_dz + dph_dz * dph_dx) * data_3d['Tradxz'] \
+          + dph_dy * dph_dy * data_3d['Tradyy'] \
+          + (dph_dy * dph_dz + dph_dz * dph_dy) * data_3d['Tradyz'] \
+          + dph_dz * dph_dz * data_3d['Tradzz']
 
     # Calculate covariant radiation stress-energy tensor in SKS components
-    ttrad_tt = g_tt * g_tt * data_3d['Tradtt'] + (g_tt * g_tr + g_tr * g_tt) * data_3d['Tradtr'] \
-        + (g_tt * g_tth + g_tth * g_tt) * data_3d['Tradtth'] \
-        + (g_tt * g_tph + g_tph * g_tt) * data_3d['Tradtph'] + g_tr * g_tr * data_3d['Tradrr'] \
-        + (g_tr * g_tth + g_tth * g_tr) * data_3d['Tradrth'] \
-        + (g_tr * g_tph + g_tph * g_tr) * data_3d['Tradrph'] + g_tth * g_tth * data_3d['Tradthth'] \
-        + (g_tth * g_tph + g_tph * g_tth) * data_3d['Tradthph'] \
-        + g_tph * g_tph * data_3d['Tradphph']
-    ttrad_tr = g_tt * g_tr * data_3d['Tradtt'] + (g_tt * g_rr + g_tr * g_tr) * data_3d['Tradtr'] \
-        + (g_tt * g_rth + g_tth * g_tr) * data_3d['Tradtth'] \
-        + (g_tt * g_rph + g_tph * g_tr) * data_3d['Tradtph'] + g_tr * g_rr * data_3d['Tradrr'] \
-        + (g_tr * g_rth + g_tth * g_rr) * data_3d['Tradrth'] \
-        + (g_tr * g_rph + g_tph * g_rr) * data_3d['Tradrph'] + g_tth * g_rth * data_3d['Tradthth'] \
-        + (g_tth * g_rph + g_tph * g_rth) * data_3d['Tradthph'] \
-        + g_tph * g_rph * data_3d['Tradphph']
-    ttrad_tth = g_tt * g_tth * data_3d['Tradtt'] \
-        + (g_tt * g_rth + g_tr * g_tth) * data_3d['Tradtr'] \
-        + (g_tt * g_thth + g_tth * g_tth) * data_3d['Tradtth'] \
-        + (g_tt * g_thph + g_tph * g_tth) * data_3d['Tradtph'] + g_tr * g_rth * data_3d['Tradrr'] \
-        + (g_tr * g_thth + g_tth * g_rth) * data_3d['Tradrth'] \
-        + (g_tr * g_thph + g_tph * g_rth) * data_3d['Tradrph'] \
-        + g_tth * g_thth * data_3d['Tradthth'] \
-        + (g_tth * g_thph + g_tph * g_thth) * data_3d['Tradthph'] \
-        + g_tph * g_thph * data_3d['Tradphph']
-    ttrad_tph = g_tt * g_tph * data_3d['Tradtt'] \
-        + (g_tt * g_rph + g_tr * g_tph) * data_3d['Tradtr'] \
-        + (g_tt * g_thph + g_tth * g_tph) * data_3d['Tradtth'] \
-        + (g_tt * g_phph + g_tph * g_tph) * data_3d['Tradtph'] + g_tr * g_rph * data_3d['Tradrr'] \
-        + (g_tr * g_thph + g_tth * g_rph) * data_3d['Tradrth'] \
-        + (g_tr * g_phph + g_tph * g_rph) * data_3d['Tradrph'] \
-        + g_tth * g_thph * data_3d['Tradthth'] \
-        + (g_tth * g_phph + g_tph * g_thph) * data_3d['Tradthph'] \
-        + g_tph * g_phph * data_3d['Tradphph']
-    ttrad_rr = g_tr * g_tr * data_3d['Tradtt'] + (g_tr * g_rr + g_rr * g_tr) * data_3d['Tradtr'] \
-        + (g_tr * g_rth + g_rth * g_tr) * data_3d['Tradtth'] \
-        + (g_tr * g_rph + g_rph * g_tr) * data_3d['Tradtph'] + g_rr * g_rr * data_3d['Tradrr'] \
-        + (g_rr * g_rth + g_rth * g_rr) * data_3d['Tradrth'] \
-        + (g_rr * g_rph + g_rph * g_rr) * data_3d['Tradrph'] + g_rth * g_rth * data_3d['Tradthth'] \
-        + (g_rth * g_rph + g_rph * g_rth) * data_3d['Tradthph'] \
-        + g_rph * g_rph * data_3d['Tradphph']
-    ttrad_rth = g_tr * g_tth * data_3d['Tradtt'] \
-        + (g_tr * g_rth + g_rr * g_tth) * data_3d['Tradtr'] \
-        + (g_tr * g_thth + g_rth * g_tth) * data_3d['Tradtth'] \
-        + (g_tr * g_thph + g_rph * g_tth) * data_3d['Tradtph'] + g_rr * g_rth * data_3d['Tradrr'] \
-        + (g_rr * g_thth + g_rth * g_rth) * data_3d['Tradrth'] \
-        + (g_rr * g_thph + g_rph * g_rth) * data_3d['Tradrph'] \
-        + g_rth * g_thth * data_3d['Tradthth'] \
-        + (g_rth * g_thph + g_rph * g_thth) * data_3d['Tradthph'] \
-        + g_rph * g_thph * data_3d['Tradphph']
-    ttrad_rph = g_tr * g_tph * data_3d['Tradtt'] \
-        + (g_tr * g_rph + g_rr * g_tph) * data_3d['Tradtr'] \
-        + (g_tr * g_thph + g_rth * g_tph) * data_3d['Tradtth'] \
-        + (g_tr * g_phph + g_rph * g_tph) * data_3d['Tradtph'] + g_rr * g_rph * data_3d['Tradrr'] \
-        + (g_rr * g_thph + g_rth * g_rph) * data_3d['Tradrth'] \
-        + (g_rr * g_phph + g_rph * g_rph) * data_3d['Tradrph'] \
-        + g_rth * g_thph * data_3d['Tradthth'] \
-        + (g_rth * g_phph + g_rph * g_thph) * data_3d['Tradthph'] \
-        + g_rph * g_phph * data_3d['Tradphph']
-    ttrad_thth = g_tth * g_tth * data_3d['Tradtt'] \
-        + (g_tth * g_rth + g_rth * g_tth) * data_3d['Tradtr'] \
-        + (g_tth * g_thth + g_thth * g_tth) * data_3d['Tradtth'] \
-        + (g_tth * g_thph + g_thph * g_tth) * data_3d['Tradtph'] \
-        + g_rth * g_rth * data_3d['Tradrr'] \
-        + (g_rth * g_thth + g_thth * g_rth) * data_3d['Tradrth'] \
-        + (g_rth * g_thph + g_thph * g_rth) * data_3d['Tradrph'] \
-        + g_thth * g_thth * data_3d['Tradthth'] \
-        + (g_thth * g_thph + g_thph * g_thth) * data_3d['Tradthph'] \
-        + g_thph * g_thph * data_3d['Tradphph']
-    ttrad_thph = g_tth * g_tph * data_3d['Tradtt'] \
-        + (g_tth * g_rph + g_rth * g_tph) * data_3d['Tradtr'] \
-        + (g_tth * g_thph + g_thth * g_tph) * data_3d['Tradtth'] \
-        + (g_tth * g_phph + g_thph * g_tph) * data_3d['Tradtph'] \
-        + g_rth * g_rph * data_3d['Tradrr'] \
-        + (g_rth * g_thph + g_thth * g_rph) * data_3d['Tradrth'] \
-        + (g_rth * g_phph + g_thph * g_rph) * data_3d['Tradrph'] \
-        + g_thth * g_thph * data_3d['Tradthth'] \
-        + (g_thth * g_phph + g_thph * g_thph) * data_3d['Tradthph'] \
-        + g_thph * g_phph * data_3d['Tradphph']
-    ttrad_phph = g_tph * g_tph * data_3d['Tradtt'] \
-        + (g_tph * g_rph + g_rph * g_tph) * data_3d['Tradtr'] \
-        + (g_tph * g_thph + g_thph * g_tph) * data_3d['Tradtth'] \
-        + (g_tph * g_phph + g_phph * g_tph) * data_3d['Tradtph'] \
-        + g_rph * g_rph * data_3d['Tradrr'] \
-        + (g_rph * g_thph + g_thph * g_rph) * data_3d['Tradrth'] \
-        + (g_rph * g_phph + g_phph * g_rph) * data_3d['Tradrph'] \
-        + g_thph * g_thph * data_3d['Tradthth'] \
-        + (g_thph * g_phph + g_phph * g_thph) * data_3d['Tradthph'] \
-        + g_phph * g_phph * data_3d['Tradphph']
+    if include_rad:
+      ttrad_tt = g_tt * g_tt * data_3d['Tradtt'] + (g_tt * g_tr + g_tr * g_tt) * data_3d['Tradtr'] \
+          + (g_tt * g_tth + g_tth * g_tt) * data_3d['Tradtth'] \
+          + (g_tt * g_tph + g_tph * g_tt) * data_3d['Tradtph'] + g_tr * g_tr * data_3d['Tradrr'] \
+          + (g_tr * g_tth + g_tth * g_tr) * data_3d['Tradrth'] \
+          + (g_tr * g_tph + g_tph * g_tr) * data_3d['Tradrph'] \
+          + g_tth * g_tth * data_3d['Tradthth'] \
+          + (g_tth * g_tph + g_tph * g_tth) * data_3d['Tradthph'] \
+          + g_tph * g_tph * data_3d['Tradphph']
+      ttrad_tr = g_tt * g_tr * data_3d['Tradtt'] + (g_tt * g_rr + g_tr * g_tr) * data_3d['Tradtr'] \
+          + (g_tt * g_rth + g_tth * g_tr) * data_3d['Tradtth'] \
+          + (g_tt * g_rph + g_tph * g_tr) * data_3d['Tradtph'] + g_tr * g_rr * data_3d['Tradrr'] \
+          + (g_tr * g_rth + g_tth * g_rr) * data_3d['Tradrth'] \
+          + (g_tr * g_rph + g_tph * g_rr) * data_3d['Tradrph'] \
+          + g_tth * g_rth * data_3d['Tradthth'] \
+          + (g_tth * g_rph + g_tph * g_rth) * data_3d['Tradthph'] \
+          + g_tph * g_rph * data_3d['Tradphph']
+      ttrad_tth = g_tt * g_tth * data_3d['Tradtt'] \
+          + (g_tt * g_rth + g_tr * g_tth) * data_3d['Tradtr'] \
+          + (g_tt * g_thth + g_tth * g_tth) * data_3d['Tradtth'] \
+          + (g_tt * g_thph + g_tph * g_tth) * data_3d['Tradtph'] \
+          + g_tr * g_rth * data_3d['Tradrr'] \
+          + (g_tr * g_thth + g_tth * g_rth) * data_3d['Tradrth'] \
+          + (g_tr * g_thph + g_tph * g_rth) * data_3d['Tradrph'] \
+          + g_tth * g_thth * data_3d['Tradthth'] \
+          + (g_tth * g_thph + g_tph * g_thth) * data_3d['Tradthph'] \
+          + g_tph * g_thph * data_3d['Tradphph']
+      ttrad_tph = g_tt * g_tph * data_3d['Tradtt'] \
+          + (g_tt * g_rph + g_tr * g_tph) * data_3d['Tradtr'] \
+          + (g_tt * g_thph + g_tth * g_tph) * data_3d['Tradtth'] \
+          + (g_tt * g_phph + g_tph * g_tph) * data_3d['Tradtph'] \
+          + g_tr * g_rph * data_3d['Tradrr'] \
+          + (g_tr * g_thph + g_tth * g_rph) * data_3d['Tradrth'] \
+          + (g_tr * g_phph + g_tph * g_rph) * data_3d['Tradrph'] \
+          + g_tth * g_thph * data_3d['Tradthth'] \
+          + (g_tth * g_phph + g_tph * g_thph) * data_3d['Tradthph'] \
+          + g_tph * g_phph * data_3d['Tradphph']
+      ttrad_rr = g_tr * g_tr * data_3d['Tradtt'] + (g_tr * g_rr + g_rr * g_tr) * data_3d['Tradtr'] \
+          + (g_tr * g_rth + g_rth * g_tr) * data_3d['Tradtth'] \
+          + (g_tr * g_rph + g_rph * g_tr) * data_3d['Tradtph'] + g_rr * g_rr * data_3d['Tradrr'] \
+          + (g_rr * g_rth + g_rth * g_rr) * data_3d['Tradrth'] \
+          + (g_rr * g_rph + g_rph * g_rr) * data_3d['Tradrph'] \
+          + g_rth * g_rth * data_3d['Tradthth'] \
+          + (g_rth * g_rph + g_rph * g_rth) * data_3d['Tradthph'] \
+          + g_rph * g_rph * data_3d['Tradphph']
+      ttrad_rth = g_tr * g_tth * data_3d['Tradtt'] \
+          + (g_tr * g_rth + g_rr * g_tth) * data_3d['Tradtr'] \
+          + (g_tr * g_thth + g_rth * g_tth) * data_3d['Tradtth'] \
+          + (g_tr * g_thph + g_rph * g_tth) * data_3d['Tradtph'] \
+          + g_rr * g_rth * data_3d['Tradrr'] \
+          + (g_rr * g_thth + g_rth * g_rth) * data_3d['Tradrth'] \
+          + (g_rr * g_thph + g_rph * g_rth) * data_3d['Tradrph'] \
+          + g_rth * g_thth * data_3d['Tradthth'] \
+          + (g_rth * g_thph + g_rph * g_thth) * data_3d['Tradthph'] \
+          + g_rph * g_thph * data_3d['Tradphph']
+      ttrad_rph = g_tr * g_tph * data_3d['Tradtt'] \
+          + (g_tr * g_rph + g_rr * g_tph) * data_3d['Tradtr'] \
+          + (g_tr * g_thph + g_rth * g_tph) * data_3d['Tradtth'] \
+          + (g_tr * g_phph + g_rph * g_tph) * data_3d['Tradtph'] \
+          + g_rr * g_rph * data_3d['Tradrr'] \
+          + (g_rr * g_thph + g_rth * g_rph) * data_3d['Tradrth'] \
+          + (g_rr * g_phph + g_rph * g_rph) * data_3d['Tradrph'] \
+          + g_rth * g_thph * data_3d['Tradthth'] \
+          + (g_rth * g_phph + g_rph * g_thph) * data_3d['Tradthph'] \
+          + g_rph * g_phph * data_3d['Tradphph']
+      ttrad_thth = g_tth * g_tth * data_3d['Tradtt'] \
+          + (g_tth * g_rth + g_rth * g_tth) * data_3d['Tradtr'] \
+          + (g_tth * g_thth + g_thth * g_tth) * data_3d['Tradtth'] \
+          + (g_tth * g_thph + g_thph * g_tth) * data_3d['Tradtph'] \
+          + g_rth * g_rth * data_3d['Tradrr'] \
+          + (g_rth * g_thth + g_thth * g_rth) * data_3d['Tradrth'] \
+          + (g_rth * g_thph + g_thph * g_rth) * data_3d['Tradrph'] \
+          + g_thth * g_thth * data_3d['Tradthth'] \
+          + (g_thth * g_thph + g_thph * g_thth) * data_3d['Tradthph'] \
+          + g_thph * g_thph * data_3d['Tradphph']
+      ttrad_thph = g_tth * g_tph * data_3d['Tradtt'] \
+          + (g_tth * g_rph + g_rth * g_tph) * data_3d['Tradtr'] \
+          + (g_tth * g_thph + g_thth * g_tph) * data_3d['Tradtth'] \
+          + (g_tth * g_phph + g_thph * g_tph) * data_3d['Tradtph'] \
+          + g_rth * g_rph * data_3d['Tradrr'] \
+          + (g_rth * g_thph + g_thth * g_rph) * data_3d['Tradrth'] \
+          + (g_rth * g_phph + g_thph * g_rph) * data_3d['Tradrph'] \
+          + g_thth * g_thph * data_3d['Tradthth'] \
+          + (g_thth * g_phph + g_thph * g_thph) * data_3d['Tradthph'] \
+          + g_thph * g_phph * data_3d['Tradphph']
+      ttrad_phph = g_tph * g_tph * data_3d['Tradtt'] \
+          + (g_tph * g_rph + g_rph * g_tph) * data_3d['Tradtr'] \
+          + (g_tph * g_thph + g_thph * g_tph) * data_3d['Tradtth'] \
+          + (g_tph * g_phph + g_phph * g_tph) * data_3d['Tradtph'] \
+          + g_rph * g_rph * data_3d['Tradrr'] \
+          + (g_rph * g_thph + g_thph * g_rph) * data_3d['Tradrth'] \
+          + (g_rph * g_phph + g_phph * g_rph) * data_3d['Tradrph'] \
+          + g_thph * g_thph * data_3d['Tradthth'] \
+          + (g_thph * g_phph + g_phph * g_thph) * data_3d['Tradthph'] \
+          + g_phph * g_phph * data_3d['Tradphph']
 
     # Calculate pre-averaging derived quantities
     with warnings.catch_warnings():
@@ -711,10 +733,11 @@ def main(**kwargs):
 
       # Calculate gas quantities
       data_3d['pgas'] = (gamma_adi - 1.0) * data_3d['ugas']
-      data_3d['T_cgs'] = mu * mp_cgs * c_cgs ** 2 / kb_cgs * data_3d['pgas'] / data_3d['rho']
       data_3d['vr'] = data_3d['ur'] / data_3d['ut']
       data_3d['vth'] = data_3d['uth'] / data_3d['ut']
       data_3d['vph'] = data_3d['uph'] / data_3d['ut']
+      if include_rad:
+        data_3d['T_cgs'] = mu * mp_cgs * c_cgs ** 2 / kb_cgs * data_3d['pgas'] / data_3d['rho']
 
       # Calculate magnetic quantities
       data_3d['pmag'] = 0.5 * (b_t * bt + b_r * br + b_th * bth + b_ph * bph)
@@ -722,48 +745,53 @@ def main(**kwargs):
       data_3d['sigma'] = 2.0 * data_3d['pmag'] / data_3d['rho']
 
       # Calculate radiation quantities
-      data_3d['prad'] = 1.0/3.0 * data_3d['urad']
-      data_3d['prad_rho'] = data_3d['prad'] / data_3d['rho']
+      if include_rad:
+        data_3d['prad'] = 1.0/3.0 * data_3d['urad']
+        data_3d['prad_rho'] = data_3d['prad'] / data_3d['rho']
 
       # Calculate pressures
-      data_3d['prad_pgas'] = data_3d['prad'] / data_3d['pgas']
-      data_3d['pmag_prad'] = data_3d['pmag'] / data_3d['prad']
-      ptot = data_3d['pgas'] + data_3d['pmag'] + data_3d['prad']
+      ptot = data_3d['pgas'] + data_3d['pmag']
+      if include_rad:
+        ptot += data_3d['prad']
+        data_3d['prad_pgas'] = data_3d['prad'] / data_3d['pgas']
+        data_3d['pmag_prad'] = data_3d['pmag'] / data_3d['prad']
+        data_3d['prad_ptot'] = data_3d['prad'] / ptot
       data_3d['pgas_ptot'] = data_3d['pgas'] / ptot
       data_3d['pmag_ptot'] = data_3d['pmag'] / ptot
-      data_3d['prad_ptot'] = data_3d['prad'] / ptot
 
       # Calculate enthalpies
       wgas = data_3d['rho'] + data_3d['ugas'] + data_3d['pgas']
-      wtot = wgas + 2.0 * data_3d['pmag'] + 4.0 * data_3d['prad']
+      wtot = wgas + 2.0 * data_3d['pmag']
+      if include_rad:
+        wtot += 4.0 * data_3d['prad']
 
       # Calculate radiation fluxes
-      fradt = (data_3d['Tradtt'] - (data_3d['urad'] + data_3d['prad']) * data_3d['ut'] ** 2 \
-          - data_3d['prad'] * gtt) / (2.0 * data_3d['ut'])
-      fradr = (data_3d['Tradtr'] \
-          - (data_3d['urad'] + data_3d['prad']) * data_3d['ut'] * data_3d['ur'] \
-          - data_3d['prad'] * gtr - fradt * data_3d['ur']) / data_3d['ut']
-      fradth = (data_3d['Tradtth'] - (data_3d['urad'] \
-          + data_3d['prad']) * data_3d['ut'] * data_3d['uth'] - data_3d['prad'] * gtth \
-          - fradt * data_3d['uth']) / data_3d['ut']
-      fradph = (data_3d['Tradtph'] - (data_3d['urad'] \
-          + data_3d['prad']) * data_3d['ut'] * data_3d['uph'] - data_3d['prad'] * gtph \
-          - fradt * data_3d['uph']) / data_3d['ut']
-      frad_r = g_tr * fradt + g_rr * fradr + g_rth * fradth + g_rph * fradph
-      frad_th = g_tth * fradt + g_rth * fradr + g_thth * fradth + g_thph * fradph
+      if include_rad:
+        fradt = (data_3d['Tradtt'] - (data_3d['urad'] + data_3d['prad']) * data_3d['ut'] ** 2 \
+            - data_3d['prad'] * gtt) / (2.0 * data_3d['ut'])
+        fradr = (data_3d['Tradtr'] \
+            - (data_3d['urad'] + data_3d['prad']) * data_3d['ut'] * data_3d['ur'] \
+            - data_3d['prad'] * gtr - fradt * data_3d['ur']) / data_3d['ut']
+        fradth = (data_3d['Tradtth'] - (data_3d['urad'] \
+            + data_3d['prad']) * data_3d['ut'] * data_3d['uth'] - data_3d['prad'] * gtth \
+            - fradt * data_3d['uth']) / data_3d['ut']
+        fradph = (data_3d['Tradtph'] - (data_3d['urad'] \
+            + data_3d['prad']) * data_3d['ut'] * data_3d['uph'] - data_3d['prad'] * gtph \
+            - fradt * data_3d['uph']) / data_3d['ut']
+        frad_r = g_tr * fradt + g_rr * fradr + g_rth * fradth + g_rph * fradph
+        frad_th = g_tth * fradt + g_rth * fradr + g_thth * fradth + g_thph * fradph
 
       # Calculate radial accelerations
       data_3d['acc_r_tot'] = (np.gradient(det * wtot * data_3d['ur'] * u_r, r[0,0,:], axis=2) \
           + np.gradient(det * wtot * data_3d['uth'] * u_r, th[0,:,0], axis=1)) / (det * wtot)
       data_3d['acc_r_pgas'] = -np.gradient(data_3d['pgas'], r[0,0,:], axis=2) / wtot
       data_3d['acc_r_pmag'] = -np.gradient(data_3d['pmag'], r[0,0,:], axis=2) / wtot
-      data_3d['acc_r_prad'] = -np.gradient(data_3d['prad'], r[0,0,:], axis=2) / wtot
       data_3d['acc_r_tens'] = (np.gradient(det * br * b_r, r[0,0,:], axis=2) \
           + np.gradient(det * bth * b_r, th[0,:,0], axis=1)) / (det * wtot)
-      data_3d['acc_r_visc'] = \
-          -(np.gradient(det * (fradr * u_r + data_3d['ur'] * frad_r), r[0,0,:], axis=2) \
-          + np.gradient(det * (fradth * u_r + data_3d['uth'] * frad_r), th[0,:,0], axis=1)) \
-          / (det * wtot)
+      data_3d['acc_r_mag_other'] = -(dr_g_tt * bt ** 2 + 2.0 * dr_g_tr * bt * br \
+          + 2.0 * dr_g_tth * bt * bth + 2.0 * dr_g_tph * bt * bph + dr_g_rr * br ** 2 \
+          + 2.0 * dr_g_rth * br * bth + 2.0 * dr_g_rph * br * bph + dr_g_thth * bth ** 2 \
+          + 2.0 * dr_g_thph * bth * bph + dr_g_phph * bph ** 2) / (2.0 * wtot)
       data_3d['acc_r_grav'] = 0.5 * dr_g_tt * data_3d['ut'] ** 2
       data_3d['acc_r_cent'] = \
           0.5 * (dr_g_thth * data_3d['uth'] ** 2 + dr_g_phph * data_3d['uph'] ** 2)
@@ -774,36 +802,37 @@ def main(**kwargs):
           + 2.0 * dr_g_rth * data_3d['ur'] * data_3d['uth'] \
           + 2.0 * dr_g_rph * data_3d['ur'] * data_3d['uph'] \
           + 2.0 * dr_g_thph * data_3d['uth'] * data_3d['uph'])
-      data_3d['acc_r_mag_other'] = -(dr_g_tt * bt ** 2 + 2.0 * dr_g_tr * bt * br \
-          + 2.0 * dr_g_tth * bt * bth + 2.0 * dr_g_tph * bt * bph + dr_g_rr * br ** 2 \
-          + 2.0 * dr_g_rth * br * bth + 2.0 * dr_g_rph * br * bph + dr_g_thth * bth ** 2 \
-          + 2.0 * dr_g_thph * bth * bph + dr_g_phph * bph ** 2) / (2.0 * wtot)
-      data_3d['acc_r_rad_other'] = dr_g_tt * fradt * data_3d['ut'] \
-          + dr_g_tr * fradt * data_3d['ur'] + dr_g_tth * fradt * data_3d['uth'] \
-          + dr_g_tph * fradt * data_3d['uph'] + dr_g_rr * fradr * data_3d['ur'] \
-          + dr_g_rth * fradr * data_3d['uth'] + dr_g_rph * fradr * data_3d['uph'] \
-          + dr_g_thth * fradth * data_3d['uth'] + dr_g_thph * fradth * data_3d['uph'] \
-          + dr_g_phph * fradph * data_3d['uph']
-      data_3d['acc_r_rad_other'] += dr_g_tt * data_3d['ut'] * fradt \
-          + 2.0 * dr_g_tr * data_3d['ut'] * fradr + 2.0 * dr_g_tth * data_3d['ut'] * fradth \
-          + 2.0 * dr_g_tph * data_3d['ut'] * fradph + dr_g_rr * data_3d['ur'] * fradr \
-          + 2.0 * dr_g_rth * data_3d['ur'] * fradth + 2.0 * dr_g_rph * data_3d['ur'] * fradph \
-          + dr_g_thth * data_3d['uth'] * fradth + 2.0 * dr_g_thph * data_3d['uth'] * fradph \
-          + dr_g_phph * data_3d['uph'] * fradph
-      data_3d['acc_r_rad_other'] /= 2.0 * wtot
+      if include_rad:
+        data_3d['acc_r_prad'] = -np.gradient(data_3d['prad'], r[0,0,:], axis=2) / wtot
+        data_3d['acc_r_visc'] = \
+            -(np.gradient(det * (fradr * u_r + data_3d['ur'] * frad_r), r[0,0,:], axis=2) \
+            + np.gradient(det * (fradth * u_r + data_3d['uth'] * frad_r), th[0,:,0], axis=1)) \
+            / (det * wtot)
+        data_3d['acc_r_rad_other'] = dr_g_tt * fradt * data_3d['ut'] \
+            + dr_g_tr * fradt * data_3d['ur'] + dr_g_tth * fradt * data_3d['uth'] \
+            + dr_g_tph * fradt * data_3d['uph'] + dr_g_rr * fradr * data_3d['ur'] \
+            + dr_g_rth * fradr * data_3d['uth'] + dr_g_rph * fradr * data_3d['uph'] \
+            + dr_g_thth * fradth * data_3d['uth'] + dr_g_thph * fradth * data_3d['uph'] \
+            + dr_g_phph * fradph * data_3d['uph']
+        data_3d['acc_r_rad_other'] += dr_g_tt * data_3d['ut'] * fradt \
+            + 2.0 * dr_g_tr * data_3d['ut'] * fradr + 2.0 * dr_g_tth * data_3d['ut'] * fradth \
+            + 2.0 * dr_g_tph * data_3d['ut'] * fradph + dr_g_rr * data_3d['ur'] * fradr \
+            + 2.0 * dr_g_rth * data_3d['ur'] * fradth + 2.0 * dr_g_rph * data_3d['ur'] * fradph \
+            + dr_g_thth * data_3d['uth'] * fradth + 2.0 * dr_g_thph * data_3d['uth'] * fradph \
+            + dr_g_phph * data_3d['uph'] * fradph
+        data_3d['acc_r_rad_other'] /= 2.0 * wtot
 
       # Calculate polar accelerations
       data_3d['acc_th_tot'] = (np.gradient(det * wtot * data_3d['ur'] * u_th, r[0,0,:], axis=2) \
           + np.gradient(det * wtot * data_3d['uth'] * u_th, th[0,:,0], axis=1)) / (det * wtot)
       data_3d['acc_th_pgas'] = -np.gradient(data_3d['pgas'], th[0,:,0], axis=1) / wtot
       data_3d['acc_th_pmag'] = -np.gradient(data_3d['pmag'], th[0,:,0], axis=1) / wtot
-      data_3d['acc_th_prad'] = -np.gradient(data_3d['prad'], th[0,:,0], axis=1) / wtot
       data_3d['acc_th_tens'] = (np.gradient(det * br * b_th, r[0,0,:], axis=2) \
           + np.gradient(det * bth * b_th, th[0,:,0], axis=1)) / (det * wtot)
-      data_3d['acc_th_visc'] = \
-          -(np.gradient(det * (fradr * u_th + data_3d['ur'] * frad_th), r[0,0,:], axis=2) \
-          + np.gradient(det * (fradth * u_th + data_3d['uth'] * frad_th), th[0,:,0], axis=1)) \
-          / (det * wtot)
+      data_3d['acc_th_mag_other'] = -(dth_g_tt * bt ** 2 + 2.0 * dth_g_tr * bt * br \
+          + 2.0 * dth_g_tth * bt * bth + 2.0 * dth_g_tph * bt * bph + dth_g_rr * br ** 2 \
+          + 2.0 * dth_g_rth * br * bth + 2.0 * dth_g_rph * br * bph + dth_g_thth * bth ** 2 \
+          + 2.0 * dth_g_thph * bth * bph + dth_g_phph * bph ** 2) / (2.0 * wtot)
       data_3d['acc_th_cent'] = 0.5 * dth_g_phph * data_3d['uph'] ** 2
       data_3d['acc_th_gr'] = 0.5 * (dth_g_tt * data_3d['ut'] ** 2 + dth_g_rr * data_3d['ur'] ** 2 \
           + dth_g_thth * data_3d['uth'] ** 2 + 2.0 * dth_g_tr * data_3d['ut'] * data_3d['ur'] \
@@ -812,23 +841,25 @@ def main(**kwargs):
           + 2.0 * dth_g_rth * data_3d['ur'] * data_3d['uth'] \
           + 2.0 * dth_g_rph * data_3d['ur'] * data_3d['uph'] \
           + 2.0 * dth_g_thph * data_3d['uth'] * data_3d['uph'])
-      data_3d['acc_th_mag_other'] = -(dth_g_tt * bt ** 2 + 2.0 * dth_g_tr * bt * br \
-          + 2.0 * dth_g_tth * bt * bth + 2.0 * dth_g_tph * bt * bph + dth_g_rr * br ** 2 \
-          + 2.0 * dth_g_rth * br * bth + 2.0 * dth_g_rph * br * bph + dth_g_thth * bth ** 2 \
-          + 2.0 * dth_g_thph * bth * bph + dth_g_phph * bph ** 2) / (2.0 * wtot)
-      data_3d['acc_th_rad_other'] = dth_g_tt * fradt * data_3d['ut'] \
-          + dth_g_tr * fradt * data_3d['ur'] + dth_g_tth * fradt * data_3d['uth'] \
-          + dth_g_tph * fradt * data_3d['uph'] + dth_g_rr * fradr * data_3d['ur'] \
-          + dth_g_rth * fradr * data_3d['uth'] + dth_g_rph * fradr * data_3d['uph'] \
-          + dth_g_thth * fradth * data_3d['uth'] + dth_g_thph * fradth * data_3d['uph'] \
-          + dth_g_phph * fradph * data_3d['uph']
-      data_3d['acc_th_rad_other'] += dth_g_tt * data_3d['ut'] * fradt \
-          + 2.0 * dth_g_tr * data_3d['ut'] * fradr + 2.0 * dth_g_tth * data_3d['ut'] * fradth \
-          + 2.0 * dth_g_tph * data_3d['ut'] * fradph + dth_g_rr * data_3d['ur'] * fradr \
-          + 2.0 * dth_g_rth * data_3d['ur'] * fradth + 2.0 * dth_g_rph * data_3d['ur'] * fradph \
-          + dth_g_thth * data_3d['uth'] * fradth + 2.0 * dth_g_thph * data_3d['uth'] * fradph \
-          + dth_g_phph * data_3d['uph'] * fradph
-      data_3d['acc_th_rad_other'] /= 2.0 * wtot
+      if include_rad:
+        data_3d['acc_th_prad'] = -np.gradient(data_3d['prad'], th[0,:,0], axis=1) / wtot
+        data_3d['acc_th_visc'] = \
+            -(np.gradient(det * (fradr * u_th + data_3d['ur'] * frad_th), r[0,0,:], axis=2) \
+            + np.gradient(det * (fradth * u_th + data_3d['uth'] * frad_th), th[0,:,0], axis=1)) \
+            / (det * wtot)
+        data_3d['acc_th_rad_other'] = dth_g_tt * fradt * data_3d['ut'] \
+            + dth_g_tr * fradt * data_3d['ur'] + dth_g_tth * fradt * data_3d['uth'] \
+            + dth_g_tph * fradt * data_3d['uph'] + dth_g_rr * fradr * data_3d['ur'] \
+            + dth_g_rth * fradr * data_3d['uth'] + dth_g_rph * fradr * data_3d['uph'] \
+            + dth_g_thth * fradth * data_3d['uth'] + dth_g_thph * fradth * data_3d['uph'] \
+            + dth_g_phph * fradph * data_3d['uph']
+        data_3d['acc_th_rad_other'] += dth_g_tt * data_3d['ut'] * fradt \
+            + 2.0 * dth_g_tr * data_3d['ut'] * fradr + 2.0 * dth_g_tth * data_3d['ut'] * fradth \
+            + 2.0 * dth_g_tph * data_3d['ut'] * fradph + dth_g_rr * data_3d['ur'] * fradr \
+            + 2.0 * dth_g_rth * data_3d['ur'] * fradth + 2.0 * dth_g_rph * data_3d['ur'] * fradph \
+            + dth_g_thth * data_3d['uth'] * fradth + 2.0 * dth_g_thph * data_3d['uth'] * fradph \
+            + dth_g_phph * data_3d['uph'] * fradph
+        data_3d['acc_th_rad_other'] /= 2.0 * wtot
 
       # Calculate average velocities
       uaver = 0.0
@@ -952,26 +983,27 @@ def main(**kwargs):
           + fph_thave * fph_phave * ttmag_phph
 
       # Calculate radiation Lagrangian stress
-      data_3d['Trad_rph_f'] = ft_rave * ft_phave * ttrad_tt \
-          + (ft_rave * fr_phave + fr_rave * ft_phave) * ttrad_tr \
-          + (ft_rave * fth_phave + fth_rave * ft_phave) * ttrad_tth \
-          + (ft_rave * fph_phave + fph_rave * ft_phave) * ttrad_tph \
-          + fr_rave * fr_phave * ttrad_rr + (fr_rave * fth_phave \
-          + fth_rave * fr_phave) * ttrad_rth \
-          + (fr_rave * fph_phave + fph_rave * fr_phave) * ttrad_rph \
-          + fth_rave * fth_phave * ttrad_thth \
-          + (fth_rave * fph_phave + fph_rave * fth_phave) * ttrad_thph \
-          + fph_rave * fph_phave * ttrad_phph
-      data_3d['Trad_thph_f'] = ft_thave * ft_phave * ttrad_tt \
-          + (ft_thave * fr_phave + fr_thave * ft_phave) * ttrad_tr \
-          + (ft_thave * fth_phave + fth_thave * ft_phave) * ttrad_tth \
-          + (ft_thave * fph_phave + fph_thave * ft_phave) * ttrad_tph \
-          + fr_thave * fr_phave * ttrad_rr \
-          + (fr_thave * fth_phave + fth_thave * fr_phave) * ttrad_rth \
-          + (fr_thave * fph_phave + fph_thave * fr_phave) * ttrad_rph \
-          + fth_thave * fth_phave * ttrad_thth \
-          + (fth_thave * fph_phave + fph_thave * fth_phave) * ttrad_thph \
-          + fph_thave * fph_phave * ttrad_phph
+      if include_rad:
+        data_3d['Trad_rph_f'] = ft_rave * ft_phave * ttrad_tt \
+            + (ft_rave * fr_phave + fr_rave * ft_phave) * ttrad_tr \
+            + (ft_rave * fth_phave + fth_rave * ft_phave) * ttrad_tth \
+            + (ft_rave * fph_phave + fph_rave * ft_phave) * ttrad_tph \
+            + fr_rave * fr_phave * ttrad_rr + (fr_rave * fth_phave \
+            + fth_rave * fr_phave) * ttrad_rth \
+            + (fr_rave * fph_phave + fph_rave * fr_phave) * ttrad_rph \
+            + fth_rave * fth_phave * ttrad_thth \
+            + (fth_rave * fph_phave + fph_rave * fth_phave) * ttrad_thph \
+            + fph_rave * fph_phave * ttrad_phph
+        data_3d['Trad_thph_f'] = ft_thave * ft_phave * ttrad_tt \
+            + (ft_thave * fr_phave + fr_thave * ft_phave) * ttrad_tr \
+            + (ft_thave * fth_phave + fth_thave * ft_phave) * ttrad_tth \
+            + (ft_thave * fph_phave + fph_thave * ft_phave) * ttrad_tph \
+            + fr_thave * fr_phave * ttrad_rr \
+            + (fr_thave * fth_phave + fth_thave * fr_phave) * ttrad_rth \
+            + (fr_thave * fph_phave + fph_thave * fr_phave) * ttrad_rph \
+            + fth_thave * fth_phave * ttrad_thth \
+            + (fth_thave * fph_phave + fph_thave * fth_phave) * ttrad_thph \
+            + fph_thave * fph_phave * ttrad_phph
 
     # Average quantities in azimuth
     if frame_n == 0:
@@ -982,7 +1014,8 @@ def main(**kwargs):
     # Calculate post-averaging derived quantities
     data_2d['ugas'] = data_2d['pgas'] / (gamma_adi - 1.0)
     data_2d['umag'] = data_2d['pmag']
-    data_2d['urad'] = 3.0 * data_2d['prad']
+    if include_rad:
+      data_2d['urad'] = 3.0 * data_2d['prad']
 
     # Save results
     data_out = {}
@@ -1015,5 +1048,7 @@ if __name__ == '__main__':
       help='number of azimuthal zones in 3D version of output grid')
   parser.add_argument('--no_interp', action='store_true', \
       help='flag indicating remapping to be done with nearest neighbors rather than interpolation')
+  parser.add_argument('--no_rad', action='store_true', \
+      help='flag indicating radiation quantities should be ignored')
   args = parser.parse_args()
   main(**vars(args))
