@@ -8,7 +8,9 @@ Usage:
     <input_file_base> <output_file_base> \
     <frame_min> <frame_max> <frame_stride> \
     [--r_min <r_in>] [--r_max <r_out>] [--n_r <n_r>] \
-    [--lat_max <lat_max>] [--n_th <n_th>]
+    [--lat_max <lat_max>] [--n_th <n_th>] \
+    [--n_ph <n_ph>] \
+    [--no_interp] [--no_rad]
 
 <input_file_base> should refer to standard AthenaK .bin data dumps that use GR
 (Cartesian Kerr-Schild coordinates). Files should have the form
@@ -33,6 +35,7 @@ Options:
       integer that yields approximately square cells given other inputs
   --no_interp: flag indicating remapping to be done with nearest neighbors
       rather than interpolation
+  --no_rad: flag indicating radiation quantities should be ignored
 
 Reduction is performed as follows: For each cell in the new (phi,theta,r) grid,
 the primitives are obtained via trilinear interpolation on the old (z,y,x) grid
