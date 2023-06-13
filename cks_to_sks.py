@@ -10,7 +10,8 @@ Usage:
     [--r_min <r_in>] [--r_max <r_out>] [--n_r <n_r>] \
     [--lat_max <lat_max>] [--n_th <n_th>] \
     [--n_ph <n_ph>] \
-    [--no_interp] [--no_rad]
+    [--no_interp] [--no_rad] \
+    [--mpi]
 
 <input_file_base> should refer to standard AthenaK .bin data dumps that use GR
 (Cartesian Kerr-Schild coordinates). Files should have the form
@@ -36,14 +37,13 @@ Options:
   --no_interp: flag indicating remapping to be done with nearest neighbors
       rather than interpolation
   --no_rad: flag indicating radiation quantities should be ignored
+  --mpi: flag indicating MPI should be used to distribute work
 
 Mapping is performed as follows: For each cell in the new (phi,theta,r) grid,
 the primitives are obtained via trilinear interpolation on the old (z,y,x) grid
 to the new cell center. Note that for coarse new grids this subsamples the data,
 rather than averaging data in all old cells contained within a new cell. On the
 new grid, quantities are transformed to spherical components.
-
-Run "cks_to_sks.py -h" to see a full description of inputs.
 """
 
 # Python standard modules
@@ -74,6 +74,7 @@ def main(**kwargs):
   n_ph = kwargs['n_ph']
   interp = not kwargs['no_interp']
   include_rad = not kwargs['no_rad']
+  use_mpi = kwargs['mpi']
 
   # Parameters - quantities to extract
   quantities_to_extract = ['dens', 'eint', 'velx', 'vely', 'velz']
@@ -89,8 +90,24 @@ def main(**kwargs):
     quantities_to_save += \
         ['urad', 'Rtt', 'Rtr', 'Rtth', 'Rtph', 'Rrr', 'Rrth', 'Rrph', 'Rthth', 'Rthph', 'Rphph']
 
+  # Calculate which frames to process
+  frames = range(frame_min, frame_max + 1, frame_stride)
+  if use_mpi:
+    from mpi4py import MPI
+    comm = MPI.COMM_WORLD
+    size = comm.Get_size()
+    rank = comm.Get_rank()
+    num_frames = len(frames)
+    num_frames_per_rank = num_frames // size
+    num_frames_extra = num_frames % size
+    num_frames_list = [num_frames_per_rank + 1] * num_frames_extra \
+        + [num_frames_per_rank] * (size - num_frames_extra)
+    num_frames_previous = sum(num_frames_list[:rank])
+    num_frames_local = num_frames_list[rank]
+    frames = frames[num_frames_previous:num_frames_previous+num_frames_local]
+
   # Go through files
-  for frame_n, frame in enumerate(range(frame_min, frame_max + 1, frame_stride)):
+  for frame_n, frame in enumerate(frames):
 
     # Calculate file names
     input_file = '{0}.{1:05d}.bin'.format(input_file_base, frame)
@@ -569,5 +586,7 @@ if __name__ == '__main__':
       help='flag indicating remapping to be done with nearest neighbors rather than interpolation')
   parser.add_argument('--no_rad', action='store_true', \
       help='flag indicating radiation quantities should be ignored')
+  parser.add_argument('--mpi', action='store_true', \
+      help='flag indicating MPI should be used to distribute work')
   args = parser.parse_args()
   main(**vars(args))
