@@ -7,7 +7,7 @@ Usage:
 [python3] plot_slice.py <input_file> <quantity_to_plot> <output_file> [options]
 
 Example:
-~/athenak/vis/python/plot_slice.py basename.prim.00100.bin dens image.png
+plot_slice.py basename.prim.00100.bin dens image.png
 
 <input_file> can be any standard AthenaK .bin data dump. <output_file> can have
 any extension recognized by Matplotlib (e.g., .png). If <output_file> is simply
@@ -22,26 +22,48 @@ Additional derived quantities can be computed as well. These are identified by
 prefixing with "derived:". An invalid request (e.g.,
 "plot_slice.py <input_file> derived:? show") will list available options.
 Currently, these include the following:
-  - Quantities related to gas pressure:
+  - Gas pressure and related quantities:
     - pgas: gas pressure
-    - pgas_rho: gas pressure divided by density
-    - T: temperature
-  - Non-relativistic quantities related to magnetic pressure:
-    - pmag_nr: (magnetic pressure) = B^2 / 2
-    - beta_inv_nr: 1 / (plasma beta) = (magnetic pressure) / (gas pressure)
-    - sigma_nr: (plasma sigma) = B^2 / rho
-  - Relativistic quantities related to magnetic pressure:
-    - pmag_rel: (magnetic pressure) = (B^2 - E^2) / 2
-    - beta_inv_rel: 1 / (plasma beta) = (magnetic pressure) / (gas pressure)
-    - sigma_rel: (plasma sigma) = (B^2 - E^2) / rho
-  - Relativistic quantities related to radiation:
+    - pgas_rho: pgas / rho
+    - T: temperature in K
+  - Non-relativistic velocity:
+    - vr_nr, vth_nr, vph_nr: orthonormal spherical components v^i
+  - Relativistic velocity:
+    - uut: normal-frame Lorentz factor u^{t'} = tilde{u}^t
+    - ut, ux, uy, uz: contravariant CKS 4-velocity components u^mu
+    - ur, uth, uph: contravariant SKS 4-velocity components u^i
+    - u_t, u_x, u_y, u_z: covariant CKS 4-velocity components u_mu
+    - u_r, u_th, u_ph: covariant SKS 4-velocity components u_i
+    - vx, vy, vz: CKS 3-velocity components v^i = u^i / u^t
+    - vr_rel, vth_rel, vph_rel: SKS 3-velocity components v^i = u^i / u^t
+  - Non-relativistic magnetic field and related quantities:
+    - Br_nr, Bth_nr, Bph_nr: orthonormal spherical components B^i
+    - pmag_nr: magnetic pressure, pmag = B^2 / 2
+    - beta_inv_nr: reciprocal of plasma beta, beta^{-1} = pmag / pgas
+    - sigma_nr: plasma sigma, sigma = B^2 / rho
+  - Relativistic magnetic field and related quantities:
+    - bt, bx, by, bz: contravariant CKS 4-field components b^mu
+    - br, bth, bph: contravariant SKS 4-field components b^i
+    - b_t, b_x, b_y, b_z: covariant CKS 4-field components b_mu
+    - b_r, b_th, b_ph: covariant SKS 4-field components b_i
+    - Br_rel, Bth_rel, Bph_rel: SKS 3-field components B^i = *F^{it}
+    - pmag_rel: magnetic pressure, pmag = (B^2 - E^2) / 2 = b_mu b^mu / 2
+    - beta_inv_rel: reciprocal of plasma beta, beta^{-1} = pmag / pgas
+    - sigma_rel: cold plasma sigma, sigma = 2 pmag / rho
+    - sigmah_rel: hot plasma sigma, sigma_hot = 2 pmag / (rho + ugas + pgas + 2 * pmag)
+  - Relativistic radiation quantities:
     - prad: (radiation pressure) = (fluid-frame radiation energy density) / 3
     - prad_pgas: (radiation pressure) / (gas pressure)
     - pmag_prad: (magnetic pressure) / (radiation pressure)
-  - Relativistic quantities related to velocity:
-    - uut: normal-frame Lorentz factor u^{t'} = tilde{u}^t
-    - ut, ux, uy, uz: contravariant coordinate-frame 4-velocity components u^mu
-    - vx, vy, vz: coordinate-frame 3-velocity components u^i / u^t
+  - Relativistic enthalpy densities and Bernoulli parameters:
+    - wgas: hydrodynamic enthalpy rho + ugas + pgas
+    - wmhd: magnetohydrodynamic enthalpy rho + ugas + pgas + 2 * pmag
+    - wgasrad: radiation-hydrodynamic enthalpy rho + ugas + pgas + 4 * prad
+    - wmhdrad: radiation-magnetohydrodynamic enthalpy rho + ugas + pgas + 2 * pmag + 4 * prad
+    - Begas: -u_t * wgas / rho - 1
+    - Bemhd: -u_t * wmhd / rho - 1
+    - Begasrad: -u_t * wgasrad / rho - 1
+    - Bemhdrad: -u_t * wmhdrad / rho - 1
   - Non-relativistic conserved quantities
     - cons_hydro_nr_t: pure hydrodynamical energy density
     - cons_hydro_nr_x, cons_hydro_nr_y, cons_hydro_nr_z: momentum density
@@ -61,6 +83,7 @@ Only temperature T is in physical units (K); all others are in code units.
 Optional inputs include:
   -d: direction orthogonal to slice of 3D data
   -l: location of slice of 3D data if not 0
+  --r_max: half-width of plot in both coordinates, centered at the origin
   --x1_min, --x1_max, --x2_min, --x2_max: horizontal and vertical limits of plot
   -c: colormap recognized by Matplotlib
   -n: colormap normalization (e.g., "-n log") if not linear
@@ -130,23 +153,71 @@ def main(**kwargs):
   derived_dependencies['pgas'] = ('eint',)
   derived_dependencies['pgas_rho'] = ('dens', 'eint')
   derived_dependencies['T'] = ('dens', 'eint')
-  derived_dependencies['pmag_nr'] = ('bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['pmag_rel'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['beta_inv_nr'] = ('eint', 'bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['beta_inv_rel'] = ('eint', 'velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['sigma_nr'] = ('dens', 'bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['sigma_rel'] = ('dens', 'velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['prad'] = ('r00_ff',)
-  derived_dependencies['prad_pgas'] = ('eint', 'r00_ff')
-  derived_dependencies['pmag_prad'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3', 'r00_ff')
+  derived_dependencies['vr_nr'] = ('velx', 'vely', 'velz')
+  derived_dependencies['vth_nr'] = ('velx', 'vely', 'velz')
+  derived_dependencies['vph_nr'] = ('velx', 'vely', 'velz')
   derived_dependencies['uut'] = ('velx', 'vely', 'velz')
   derived_dependencies['ut'] = ('velx', 'vely', 'velz')
   derived_dependencies['ux'] = ('velx', 'vely', 'velz')
   derived_dependencies['uy'] = ('velx', 'vely', 'velz')
   derived_dependencies['uz'] = ('velx', 'vely', 'velz')
+  derived_dependencies['ur'] = ('velx', 'vely', 'velz')
+  derived_dependencies['uth'] = ('velx', 'vely', 'velz')
+  derived_dependencies['uph'] = ('velx', 'vely', 'velz')
+  derived_dependencies['u_t'] = ('velx', 'vely', 'velz')
+  derived_dependencies['u_x'] = ('velx', 'vely', 'velz')
+  derived_dependencies['u_y'] = ('velx', 'vely', 'velz')
+  derived_dependencies['u_z'] = ('velx', 'vely', 'velz')
+  derived_dependencies['u_r'] = ('velx', 'vely', 'velz')
+  derived_dependencies['u_th'] = ('velx', 'vely', 'velz')
+  derived_dependencies['u_ph'] = ('velx', 'vely', 'velz')
   derived_dependencies['vx'] = ('velx', 'vely', 'velz')
   derived_dependencies['vy'] = ('velx', 'vely', 'velz')
   derived_dependencies['vz'] = ('velx', 'vely', 'velz')
+  derived_dependencies['vr_rel'] = ('velx', 'vely', 'velz')
+  derived_dependencies['vth_rel'] = ('velx', 'vely', 'velz')
+  derived_dependencies['vph_rel'] = ('velx', 'vely', 'velz')
+  derived_dependencies['Br_nr'] = ('bcc1', 'bcc2', 'bcc3')
+  derived_dependencies['Bth_nr'] = ('bcc1', 'bcc2', 'bcc3')
+  derived_dependencies['Bph_nr'] = ('bcc1', 'bcc2', 'bcc3')
+  derived_dependencies['pmag_nr'] = ('bcc1', 'bcc2', 'bcc3')
+  derived_dependencies['beta_inv_nr'] = ('eint', 'bcc1', 'bcc2', 'bcc3')
+  derived_dependencies['sigma_nr'] = ('dens', 'bcc1', 'bcc2', 'bcc3')
+  derived_dependencies['bt'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
+  derived_dependencies['bx'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
+  derived_dependencies['by'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
+  derived_dependencies['bz'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
+  derived_dependencies['br'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
+  derived_dependencies['bth'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
+  derived_dependencies['bph'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
+  derived_dependencies['b_t'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
+  derived_dependencies['b_x'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
+  derived_dependencies['b_y'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
+  derived_dependencies['b_z'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
+  derived_dependencies['b_r'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
+  derived_dependencies['b_th'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
+  derived_dependencies['b_ph'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
+  derived_dependencies['Br_rel'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
+  derived_dependencies['Bth_rel'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
+  derived_dependencies['Bph_rel'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
+  derived_dependencies['pmag_rel'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
+  derived_dependencies['beta_inv_rel'] = ('eint', 'velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
+  derived_dependencies['sigma_rel'] = ('dens', 'velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
+  derived_dependencies['sigmah_rel'] = \
+      ('dens', 'eint', 'velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
+  derived_dependencies['prad'] = ('r00_ff',)
+  derived_dependencies['prad_pgas'] = ('eint', 'r00_ff')
+  derived_dependencies['pmag_prad'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3', 'r00_ff')
+  derived_dependencies['wgas'] = ('dens', 'eint')
+  derived_dependencies['wmhd'] = ('dens', 'eint', 'velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
+  derived_dependencies['wgasrad'] = ('dens', 'eint', 'r00_ff')
+  derived_dependencies['wmhdrad'] = \
+      ('dens', 'eint', 'velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3', 'r00_ff')
+  derived_dependencies['Begas'] = ('dens', 'eint', 'velx', 'vely', 'velz')
+  derived_dependencies['Bemhd'] = ('dens', 'eint', 'velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
+  derived_dependencies['Begasrad'] = ('dens', 'eint', 'velx', 'vely', 'velz', 'r00_ff')
+  derived_dependencies['Bemhdrad'] = \
+      ('dens', 'eint', 'velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3', 'r00_ff')
   derived_dependencies['cons_hydro_nr_t'] = ('dens', 'eint', 'velx', 'vely', 'velz')
   derived_dependencies['cons_hydro_nr_x'] = ('dens', 'velx')
   derived_dependencies['cons_hydro_nr_y'] = ('dens', 'vely')
@@ -271,6 +342,8 @@ def main(**kwargs):
     # Extract adiabatic index from input file metadata
     if kwargs['variable'] in \
         ['derived:' + name for name in ('pgas', 'pgas_rho', 'T', 'prad_pgas')] \
+        + ['derived:sigmah_rel'] \
+        + ['derived:' + name for name in ('wgas', 'wgasrad', 'Begas', 'Begasrad')] \
         + ['derived:cons_hydro_rel_' + name for name in ('t', 'x', 'y', 'z')]:
       try:
         gamma_adi = float(input_data['hydro']['gamma'])
@@ -280,6 +353,7 @@ def main(**kwargs):
         except:
           raise RuntimeError('Unable to find adiabatic index in input file.')
     if kwargs['variable'] in ['derived:' + name for name in ('beta_inv_nr', 'beta_inv_rel')] \
+        + ['derived:' + name for name in ('wmhd', 'wmhdrad', 'Bemhd', 'Bemhdrad')] \
         + ['derived:cons_mhd_rel_' + name for name in ('t', 'x', 'y', 'z')]:
       try:
         gamma_adi = float(input_data['mhd']['gamma'])
@@ -309,16 +383,25 @@ def main(**kwargs):
         raise RuntimeError('Unable to find molecular weight in input file.')
 
     # Check input file metadata for relativity
-    if kwargs['variable'] in \
-        ['derived:' + name for name in ('pmag_nr', 'beta_inv_nr', 'sigma_nr')] \
+    if kwargs['variable'] in ['derived:' + name for name in ('vr_nr', 'vth_nr', 'vph_nr')] \
+        + ['derived:' + name for name in ('Br_nr', 'Bth_nr', 'Bph_nr')] \
+        + ['derived:' + name for name in ('pmag_nr', 'beta_inv_nr', 'sigma_nr')] \
         + ['derived:cons_hydro_nr_' + name for name in ('t', 'x', 'y', 'z')] \
         + ['derived:cons_em_nr_t'] \
         + ['derived:cons_mhd_nr_' + name for name in ('t', 'x', 'y', 'z')]:
       assert input_data['coord']['general_rel'] == 'false', \
           '"{0}" is only defined for non-GR data.'.format(variable_name)
-    if kwargs['variable'] in \
-        ['derived:' + name for name in ('pmag_rel', 'beta_inv_rel', 'sigma_rel', 'pmag_prad')] \
-        + ['derived:' + name for name in ('uut', 'ut', 'ux', 'uy', 'uz', 'vx', 'vy', 'vz')] \
+    if kwargs['variable'] in ['derived:uut'] \
+        + ['derived:' + name for name in ('ut', 'ux', 'uy', 'uz', 'ur', 'uth', 'uph')] \
+        + ['derived:' + name for name in ('u_t', 'u_x', 'u_y', 'u_z', 'u_r', 'u_th', 'u_ph')] \
+        + ['derived:' + name for name in ('vx', 'vy', 'vz', 'vr_rel', 'vth_rel', 'vph_rel')] \
+        + ['derived:' + name for name in ('bt', 'bx', 'by', 'bz', 'br', 'bth', 'bph')] \
+        + ['derived:' + name for name in ('b_t', 'b_x', 'b_y', 'b_z', 'b_r', 'b_th', 'b_ph')] \
+        + ['derived:' + name for name in ('Br_rel', 'Bth_rel', 'Bph_rel')] \
+        + ['derived:' + name for name in ('pmag_rel', 'beta_inv_rel', 'sigma_rel', 'sigmah_rel')] \
+        + ['derived:pmag_prad'] \
+        + ['derived:' + name for name in ('wgas', 'wmhd', 'wgasrad', 'wmhdrad')] \
+        + ['derived:' + name for name in ('Begas', 'Bemhd', 'Begasrad', 'Bemhdrad')] \
         + ['derived:cons_hydro_rel_' + name for name in ('t', 'x', 'y', 'z')] \
         + ['derived:cons_em_rel_' + name for name in ('t', 'x', 'y', 'z')] \
         + ['derived:cons_mhd_rel_' + name for name in ('t', 'x', 'y', 'z')]:
@@ -329,9 +412,17 @@ def main(**kwargs):
           '"horizon", "horizon_mask", and "ergosphere" options only pertain to GR data.'
 
     # Extract black hole spin from input file metadata
-    if kwargs['variable'] in \
-        ['derived:' + name for name in ('pmag_rel', 'beta_inv_rel', 'sigma_rel', 'pmag_prad')] \
-        + ['derived:' + name for name in ('uut', 'ut', 'ux', 'uy', 'uz', 'vx', 'vy', 'vz')] \
+    if kwargs['variable'] in ['derived:uut'] \
+        + ['derived:' + name for name in ('ut', 'ux', 'uy', 'uz', 'ur', 'uth', 'uph')] \
+        + ['derived:' + name for name in ('u_t', 'u_x', 'u_y', 'u_z', 'u_r', 'u_th', 'u_ph')] \
+        + ['derived:' + name for name in ('vx', 'vy', 'vz', 'vr_rel', 'vth_rel', 'vph_rel')] \
+        + ['derived:' + name for name in ('bt', 'bx', 'by', 'bz', 'br', 'bth', 'bph')] \
+        + ['derived:' + name for name in ('b_t', 'b_x', 'b_y', 'b_z', 'b_r', 'b_th', 'b_ph')] \
+        + ['derived:' + name for name in ('Br_rel', 'Bth_rel', 'Bph_rel')] \
+        + ['derived:' + name for name in ('pmag_rel', 'beta_inv_rel', 'sigma_rel', 'sigmah_rel')] \
+        + ['derived:pmag_prad'] \
+        + ['derived:' + name for name in ('wmhd', 'wmhdrad')] \
+        + ['derived:' + name for name in ('Begas', 'Bemhd', 'Begasrad', 'Bemhdrad')] \
         + ['derived:cons_hydro_rel_' + name for name in ('t', 'x', 'y', 'z')] \
         + ['derived:cons_em_rel_' + name for name in ('t', 'x', 'y', 'z')] \
         + ['derived:cons_mhd_rel_' + name for name in ('t', 'x', 'y', 'z')]:
@@ -481,7 +572,7 @@ def main(**kwargs):
   for name in variable_names_sorted:
     quantities[name] = np.array(quantities[name])
 
-  # Calculate derived quantity related to gas pressure
+  # Calculate gas pressure or related quantity
   if kwargs['variable'] in ['derived:' + name for name in ('pgas', 'pgas_rho', 'T', 'prad_pgas')]:
     pgas = (gamma_adi - 1.0) * quantities['eint']
     if kwargs['variable'] == 'derived:pgas':
@@ -494,27 +585,120 @@ def main(**kwargs):
       prad = quantities['r00_ff'] / 3.0
       quantity = prad / pgas
 
-  # Calculate derived quantity related to radiation pressure
-  elif kwargs['variable'] == 'derived:prad':
-    quantity = quantities['r00_ff'] / 3.0
+  # Calculate non-relativistic velocity
+  elif kwargs['variable'] in ['derived:' + name for name in ('vr_nr', 'vth_nr', 'vph_nr')]:
+    x, y, z = \
+        xyz(num_blocks_used, block_nx1, block_nx2, extents, kwargs['dimension'], kwargs['location'])
+    vx = quantities['velx']
+    vy = quantities['vely']
+    vz = quantities['velz']
+    vr, vth, vph = cart_to_sph(vx, vy, vz, x, y, z)
+    if kwargs['variable'] == 'derived:vr':
+      quantity = vr
+    elif kwargs['variable'] == 'derived:vth':
+      quantity = vth
+    else:
+      quantity = vph
 
-  # Calculate derived quantity related to non-relativistic magnetic pressure
-  elif kwargs['variable'] in ['derived:' + name for name in ('pmag_nr', 'beta_inv_nr', 'sigma_nr')]:
+  # Calculate relativistic velocity
+  elif kwargs['variable'] in ['derived:uut'] \
+      + ['derived:' + name for name in ('ut', 'ux', 'uy', 'uz', 'ur', 'uth', 'uph')] \
+      + ['derived:' + name for name in ('u_t', 'u_x', 'u_y', 'u_z', 'u_r', 'u_th', 'u_ph')] \
+      + ['derived:' + name for name in ('vx', 'vy', 'vz', 'vr_rel', 'vth_rel', 'vph_rel')]:
+    x, y, z = \
+        xyz(num_blocks_used, block_nx1, block_nx2, extents, kwargs['dimension'], kwargs['location'])
+    alpha, betax, betay, betaz, g_tt, g_tx, g_ty, g_tz, g_xx, g_xy, g_xz, g_yy, g_yz, g_zz = \
+        cks_geometry(bh_a, x, y, z)
+    uux = quantities['velx']
+    uuy = quantities['vely']
+    uuz = quantities['velz']
+    uut = normal_lorentz(uux, uuy, uuz, g_xx, g_xy, g_xz, g_yy, g_yz, g_zz)
+    if kwargs['variable'] == 'derived:uut':
+      quantity = uut
+    else:
+      ut, ux, uy, uz = norm_to_coord(uut, uux, uuy, uuz, alpha, betax, betay, betaz)
+      if kwargs['variable'] == 'derived:ut':
+        quantity = ut
+      elif kwargs['variable'] == 'derived:ux':
+        quantity = ux
+      elif kwargs['variable'] == 'derived:uy':
+        quantity = uy
+      elif kwargs['variable'] == 'derived:uz':
+        quantity = uz
+      elif kwargs['variable'] == 'derived:vx':
+        quantity = ux / ut
+      elif kwargs['variable'] == 'derived:vy':
+        quantity = uy / ut
+      elif kwargs['variable'] == 'derived:vz':
+        quantity = uz / ut
+      elif kwargs['variable'] in ['derived:' + name for name in ('ur', 'uth', 'uph')] \
+            + ['derived:' + name for name in ('vr_rel', 'vth_rel', 'vph_rel')]:
+        ur, uth, uph = cks_to_sks_con(ux, uy, uz, bh_a, x, y, z)
+        if kwargs['variable'] == 'derived:ur':
+          quantity = ur
+        elif kwargs['variable'] == 'derived:uth':
+          quantity = uth
+        elif kwargs['variable'] == 'derived:uph':
+          quantity = uph
+        elif kwargs['variable'] == 'derived:vr_rel':
+          quantity = ur / ut
+        elif kwargs['variable'] == 'derived:vth_rel':
+          quantity = uth / ut
+        else:
+          quantity = uph / ut
+      else:
+        u_t, u_x, u_y, u_z = \
+            lower_vector(ut, ux, uy, uz, g_tt, g_tx, g_ty, g_tz, g_xx, g_xy, g_xz, g_yy, g_yz, g_zz)
+        if kwargs['variable'] == 'derived:u_t':
+          quantity = u_t
+        elif kwargs['variable'] == 'derived:u_x':
+          quantity = u_x
+        elif kwargs['variable'] == 'derived:u_y':
+          quantity = u_y
+        elif kwargs['variable'] == 'derived:u_z':
+          quantity = u_z
+        else:
+          u_r, u_th, u_ph = cks_to_sks_cov(u_x, u_y, u_z, bh_a, x, y, z)
+          if kwargs['variable'] == 'derived:u_r':
+            quantity = u_r
+          elif kwargs['variable'] == 'derived:u_th':
+            quantity = u_th
+          else:
+            quantity = u_ph
+
+  # Calculate non-relativistic magnetic field or related quantity
+  elif kwargs['variable'] in ['derived:' + name for name in ('Br_nr', 'Bth_nr', 'Bph_nr')] \
+      + ['derived:' + name for name in ('pmag_nr', 'beta_inv_nr', 'sigma_nr')]:
     bbx = quantities['bcc1']
     bby = quantities['bcc2']
     bbz = quantities['bcc3']
-    pmag = 0.5 * (bbx ** 2 + bby ** 2 + bbz ** 2)
-    if kwargs['variable'] == 'derived:pmag_nr':
-      quantity = pmag
-    elif kwargs['variable'] == 'derived:beta_inv_nr':
-      pgas = (gamma_adi - 1.0) * quantities['eint']
-      quantity = pmag / pgas
+    if kwargs['variable'] in ['derived:' + name for name in ('Br_nr', 'Bth_nr', 'Bph_nr')]:
+      x, y, z = xyz(num_blocks_used, block_nx1, block_nx2, extents, kwargs['dimension'], \
+          kwargs['location'])
+      bbr, bbth, bbph = cart_to_sph(bbx, bby, bbz, x, y, z)
+      if kwargs['variable'] == 'derived:Br_nr':
+        quantity = bbr
+      elif kwargs['variable'] == 'derived:Bth_nr':
+        quantity = bbth
+      else:
+        quantity = bbph
     else:
-      quantity = 2.0 * pmag / quantities['dens']
+      pmag = 0.5 * (bbx ** 2 + bby ** 2 + bbz ** 2)
+      if kwargs['variable'] == 'derived:pmag_nr':
+        quantity = pmag
+      elif kwargs['variable'] == 'derived:beta_inv_nr':
+        pgas = (gamma_adi - 1.0) * quantities['eint']
+        quantity = pmag / pgas
+      else:
+        quantity = 2.0 * pmag / quantities['dens']
 
-  # Calculate derived quantity related to relativistic magnetic pressure
+  # Calculate relativistic magnetic field or related quantity
   elif kwargs['variable'] in \
-      ['derived:' + name for name in ('pmag_rel', 'beta_inv_rel', 'sigma_rel', 'pmag_prad')]:
+      ['derived:' + name for name in ('bt', 'bx', 'by', 'bz', 'br', 'bth', 'bph')] \
+      + ['derived:' + name for name in ('b_t', 'b_x', 'b_y', 'b_z', 'b_r', 'b_th', 'b_ph')] \
+      + ['derived:' + name for name in ('Br_rel', 'Bth_rel', 'Bph_rel')] \
+      + ['derived:' + name for name in ('pmag_rel', 'beta_inv_rel', 'sigma_rel', 'sigmah_rel')] \
+      + ['derived:pmag_prad']:
     x, y, z = \
         xyz(num_blocks_used, block_nx1, block_nx2, extents, kwargs['dimension'], kwargs['location'])
     alpha, betax, betay, betaz, g_tt, g_tx, g_ty, g_tz, g_xx, g_xy, g_xz, g_yy, g_yz, g_zz = \
@@ -530,53 +714,118 @@ def main(**kwargs):
     bby = quantities['bcc2']
     bbz = quantities['bcc3']
     bt, bx, by, bz = three_field_to_four_field(bbx, bby, bbz, ut, ux, uy, uz, u_x, u_y, u_z)
-    b_t, b_x, b_y, b_z = \
-        lower_vector(bt, bx, by, bz, g_tt, g_tx, g_ty, g_tz, g_xx, g_xy, g_xz, g_yy, g_yz, g_zz)
-    pmag = 0.5 * (b_t * bt + b_x * bx + b_y * by + b_z * bz)
-    if kwargs['variable'] == 'derived:pmag_rel':
-      quantity = pmag
-    elif kwargs['variable'] == 'derived:beta_inv_rel':
-      pgas = (gamma_adi - 1.0) * quantities['eint']
-      quantity = pmag / pgas
-    elif kwargs['variable'] == 'derived:sigma_rel':
-      quantity = 2.0 * pmag / quantities['dens']
+    if kwargs['variable'] in ['derived:' + name for name in ('bt', 'bx', 'by', 'bz')]:
+      if kwargs['variable'] == 'derived:bt':
+        quantity = bt
+      elif kwargs['variable'] == 'derived:bx':
+        quantity = bx
+      elif kwargs['variable'] == 'derived:by':
+        quantity = by
+      else:
+        quantity = bz
+    elif kwargs['variable'] in ['derived:' + name for name in ('br', 'bth', 'bph')]:
+      br, bth, bph = cks_to_sks_con(bx, by, bz, bh_a, x, y, z)
+      if kwargs['variable'] == 'derived:br':
+        quantity = br
+      elif kwargs['variable'] == 'derived:bth':
+        quantity = bth
+      else:
+        quantity = bph
+    elif kwargs['variable'] in ['derived:' + name for name in ('b_t', 'b_x', 'b_y', 'b_z')]:
+      b_t, b_x, b_y, b_z = \
+          lower_vector(bt, bx, by, bz, g_tt, g_tx, g_ty, g_tz, g_xx, g_xy, g_xz, g_yy, g_yz, g_zz)
+      if kwargs['variable'] == 'derived:b_t':
+        quantity = b_t
+      elif kwargs['variable'] == 'derived:b_x':
+        quantity = b_x
+      elif kwargs['variable'] == 'derived:b_y':
+        quantity = b_y
+      else:
+        quantity = b_z
+    elif kwargs['variable'] in ['derived:' + name for name in ('b_r', 'b_th', 'b_ph')]:
+      b_t, b_x, b_y, b_z = \
+          lower_vector(bt, bx, by, bz, g_tt, g_tx, g_ty, g_tz, g_xx, g_xy, g_xz, g_yy, g_yz, g_zz)
+      b_r, b_th, b_ph = cks_to_sks_cov(b_x, b_y, b_z, bh_a, x, y, z)
+      if kwargs['variable'] == 'derived:b_r':
+        quantity = b_r
+      elif kwargs['variable'] == 'derived:b_th':
+        quantity = b_th
+      else:
+        quantity = b_ph
+    elif kwargs['variable'] in ['derived:' + name for name in ('Br_rel', 'Bth_rel', 'Bph_rel')]:
+      ur, uth, uph = cks_to_sks_con(ux, uy, uz, bh_a, x, y, z)
+      br, bth, bph = cks_to_sks_con(bx, by, bz, bh_a, x, y, z)
+      if kwargs['variable'] == 'derived:Br_rel':
+        quantity = br * ut - bt * ur
+      elif kwargs['variable'] == 'derived:Bth_rel':
+        quantity = bth * ut - bt * uth
+      else:
+        quantity = bph * ut - bt * uph
     else:
-      prad = quantities['r00_ff'] / 3.0
-      with warnings.catch_warnings():
-        warnings.filterwarnings('ignore', message='divide by zero encountered in true_divide', \
-            category=RuntimeWarning)
-        quantity = pmag / prad
+      b_t, b_x, b_y, b_z = \
+          lower_vector(bt, bx, by, bz, g_tt, g_tx, g_ty, g_tz, g_xx, g_xy, g_xz, g_yy, g_yz, g_zz)
+      pmag = 0.5 * (b_t * bt + b_x * bx + b_y * by + b_z * bz)
+      if kwargs['variable'] == 'derived:pmag_rel':
+        quantity = pmag
+      elif kwargs['variable'] == 'derived:beta_inv_rel':
+        pgas = (gamma_adi - 1.0) * quantities['eint']
+        quantity = pmag / pgas
+      elif kwargs['variable'] == 'derived:sigma_rel':
+        quantity = 2.0 * pmag / quantities['dens']
+      elif kwargs['variable'] == 'derived:sigmah_rel':
+        w = quantities['dens'] + gamma_adi * quantities['eint'] + 2.0 * pmag
+        quantity = 2.0 * pmag / w
+      else:
+        prad = quantities['r00_ff'] / 3.0
+        with warnings.catch_warnings():
+          warnings.filterwarnings('ignore', message='divide by zero encountered in true_divide', \
+              category=RuntimeWarning)
+          quantity = pmag / prad
 
-  # Calculate derived quantity related to relativistic velocity
+  # Calculate relativistic radiation quantity
+  elif kwargs['variable'] == 'derived:prad':
+    quantity = quantities['r00_ff'] / 3.0
+
+  # Calculate relativistic enthalpy density or Bernoulli parameter
   elif kwargs['variable'] in \
-      ['derived:' + name for name in ('uut', 'ut', 'ux', 'uy', 'uz', 'vx', 'vy', 'vz')]:
-    x, y, z = \
-        xyz(num_blocks_used, block_nx1, block_nx2, extents, kwargs['dimension'], kwargs['location'])
-    alpha, betax, betay, betaz, g_tt, g_tx, g_ty, g_tz, g_xx, g_xy, g_xz, g_yy, g_yz, g_zz = \
-        cks_geometry(bh_a, x, y, z)
-    uux = quantities['velx']
-    uuy = quantities['vely']
-    uuz = quantities['velz']
-    uut = normal_lorentz(uux, uuy, uuz, g_xx, g_xy, g_xz, g_yy, g_yz, g_zz)
-    ut, ux, uy, uz = norm_to_coord(uut, uux, uuy, uuz, alpha, betax, betay, betaz)
-    if kwargs['variable'] == 'derived:uut':
-      quantity = uut
-    elif kwargs['variable'] == 'derived:ut':
-      quantity = ut
-    elif kwargs['variable'] == 'derived:ux':
-      quantity = ux
-    elif kwargs['variable'] == 'derived:uy':
-      quantity = uy
-    elif kwargs['variable'] == 'derived:uz':
-      quantity = uz
-    elif kwargs['variable'] == 'derived:vx':
-      quantity = ux / ut
-    elif kwargs['variable'] == 'derived:vy':
-      quantity = uy / ut
+      ['derived:' + name for name in ('wgas', 'wmhd', 'wgasrad', 'wmhdrad')] \
+      + ['derived:' + name for name in ('Begas', 'Bemhd', 'Begasrad', 'Bemhdrad')]:
+    rho = quantities['dens']
+    ugas = quantities['eint']
+    w = rho + gamma_adi * ugas
+    if kwargs['variable'] in \
+        ['derived:' + name for name in ('wgasrad', 'wmhdrad', 'Begasrad', 'Bemhdrad')]:
+      urad = quantities['r00_ff']
+      w += 4.0/3.0 * urad
+    if kwargs['variable'] in ['derived:' + name for name in ('wgas', 'wgasrad')]:
+      quantity = w
     else:
-      quantity = uz / ut
+      x, y, z = xyz(num_blocks_used, block_nx1, block_nx2, extents, kwargs['dimension'], \
+          kwargs['location'])
+      alpha, betax, betay, betaz, g_tt, g_tx, g_ty, g_tz, g_xx, g_xy, g_xz, g_yy, g_yz, g_zz = \
+          cks_geometry(bh_a, x, y, z)
+      uux = quantities['velx']
+      uuy = quantities['vely']
+      uuz = quantities['velz']
+      uut = normal_lorentz(uux, uuy, uuz, g_xx, g_xy, g_xz, g_yy, g_yz, g_zz)
+      ut, ux, uy, uz = norm_to_coord(uut, uux, uuy, uuz, alpha, betax, betay, betaz)
+      u_t, u_x, u_y, u_z = \
+          lower_vector(ut, ux, uy, uz, g_tt, g_tx, g_ty, g_tz, g_xx, g_xy, g_xz, g_yy, g_yz, g_zz)
+      if kwargs['variable'] in \
+          ['derived:' + name for name in ('wmhd', 'wmhdrad', 'Bemhd', 'Bemhdrad')]:
+        bbx = quantities['bcc1']
+        bby = quantities['bcc2']
+        bbz = quantities['bcc3']
+        bt, bx, by, bz = three_field_to_four_field(bbx, bby, bbz, ut, ux, uy, uz, u_x, u_y, u_z)
+        b_t, b_x, b_y, b_z = \
+            lower_vector(bt, bx, by, bz, g_tt, g_tx, g_ty, g_tz, g_xx, g_xy, g_xz, g_yy, g_yz, g_zz)
+        w += b_t * bt + b_x * bx + b_y * by + b_z * bz
+      if kwargs['variable'] in ['derived:' + name for name in ('wmhd', 'wmhdrad')]:
+        quantity = w
+      else:
+        quantity = -u_t * w / rho - 1.0
 
-  # Calculate derived quantity related to non-relativistic conserved variables
+  # Calculate non-relativistic conserved quantity
   elif kwargs['variable'] in ['derived:cons_hydro_nr_' + name for name in ('t', 'x', 'y', 'z')] \
       + ['derived:cons_em_nr_t'] + ['derived:cons_mhd_nr_' + name for name in ('t', 'x', 'y', 'z')]:
     if kwargs['variable'] in ['derived:cons_' + name + '_nr_t' for name in ('hydro', 'mhd')]:
@@ -606,7 +855,7 @@ def main(**kwargs):
       bbz = quantities['bcc3']
       quantity += 0.5 * (bbx ** 2 + bby ** 2 + bbz ** 2)
 
-  # Calculate derived quantity related to relativistic conserved variables
+  # Calculate relativistic conserved quantity
   elif kwargs['variable'] in ['derived:cons_hydro_rel_' + name for name in ('t', 'x', 'y', 'z')] \
       + ['derived:cons_em_rel_' + name for name in ('t', 'x', 'y', 'z')] \
       + ['derived:cons_mhd_rel_' + name for name in ('t', 'x', 'y', 'z')]:
@@ -784,6 +1033,11 @@ def main(**kwargs):
     x2_min = kwargs['x2_min']
   if kwargs['x2_max'] is not None:
     x2_max = kwargs['x2_max']
+  if kwargs['r_max'] is not None:
+    x1_min = -kwargs['r_max']
+    x1_max = kwargs['r_max']
+    x2_min = -kwargs['r_max']
+    x2_max = kwargs['r_max']
   plt.xlim((x1_min, x1_max))
   plt.ylim((x2_min, x2_max))
   if kwargs['dimension'] == 'x':
@@ -829,6 +1083,24 @@ def xyz(num_blocks_used, block_nx1, block_nx2, extents, dimension, location):
     x = x1
     y = x2
   return x, y, z
+
+# Function for converting Cartesian coordinates to spherical
+def cart_to_sph(ax, ay, az, x, y, z):
+  rr = np.sqrt(x ** 2 + y ** 2)
+  r = np.sqrt(x ** 2 + y ** 2 + z ** 2)
+  dr_dx = x / r
+  dr_dy = y / r
+  dr_dz = z / r
+  dth_dx = x * z / (rr * r)
+  dth_dy = y * z / (rr * r)
+  dth_dz = -rr / r
+  dph_dx = -y / rr
+  dph_dy = x / rr
+  dph_dz = 0.0
+  ar = dr_dx * ax + dr_dy * ay + dr_dz * az
+  ath = dth_dx * ax + dth_dy * ay + dth_dz * az
+  aph = dph_dx * ax + dph_dy * ay + dph_dz * az
+  return ar, ath, aph
 
 # Function for calculating quantities related to CKS metric
 def cks_geometry(a, x, y, z):
@@ -876,6 +1148,29 @@ def norm_to_coord(uut, uux, uuy, uuz, alpha, betax, betay, betaz):
   uz = uuz - betaz * ut
   return ut, ux, uy, uz
 
+# Function for converting contravariant CKS components to SKS
+def cks_to_sks_con(ax, ay, az, a, x, y, z):
+  a2 = a ** 2
+  x2 = x ** 2
+  y2 = y ** 2
+  z2 = z ** 2
+  rr2 = x2 + y2 + z2
+  r2 = 0.5 * (rr2 - a2 + np.sqrt((rr2 - a2) ** 2 + 4.0 * a2 * z2))
+  r = np.sqrt(r2)
+  dr_dx = r * x / (2.0 * r2 - rr2 + a2)
+  dr_dy = r * y / (2.0 * r2 - rr2 + a2)
+  dr_dz = r * z * (1.0 + a2 / r2) / (2.0 * r2 - rr2 + a2)
+  dth_dx = z / r * dr_dx / np.sqrt(r2 - z2)
+  dth_dy = z / r * dr_dy / np.sqrt(r2 - z2)
+  dth_dz = (z / r * dr_dz - 1.0) / np.sqrt(r2 - z2)
+  dph_dx = -y / (x2 + y2) + a / (r2 + a2) * dr_dx
+  dph_dy = x / (x2 + y2) + a / (r2 + a2) * dr_dy
+  dph_dz = a / (r2 + a2) * dr_dz
+  ar = dr_dx * ax + dr_dy * ay + dr_dz * az
+  ath = dth_dx * ax + dth_dy * ay + dth_dz * az
+  aph = dph_dx * ax + dph_dy * ay + dph_dz * az
+  return ar, ath, aph
+
 # Function for transforming vector from contravariant to covariant components
 def lower_vector(at, ax, ay, az, g_tt, g_tx, g_ty, g_tz, g_xx, g_xy, g_xz, g_yy, g_yz, g_zz):
   a_t = g_tt * at + g_tx * ax + g_ty * ay + g_tz * az
@@ -883,6 +1178,33 @@ def lower_vector(at, ax, ay, az, g_tt, g_tx, g_ty, g_tz, g_xx, g_xy, g_xz, g_yy,
   a_y = g_ty * at + g_xy * ax + g_yy * ay + g_yz * az
   a_z = g_tz * at + g_xz * ax + g_yz * ay + g_zz * az
   return a_t, a_x, a_y, a_z
+
+# Function for converting covariant CKS components to SKS
+def cks_to_sks_cov(a_x, a_y, a_z, a, x, y, z):
+  a2 = a ** 2
+  z2 = z ** 2
+  rr2 = x ** 2 + y ** 2 + z2
+  r2 = 0.5 * (rr2 - a2 + np.sqrt((rr2 - a2) ** 2 + 4.0 * a2 * z2))
+  r = np.sqrt(r2)
+  th = np.arccos(z / r)
+  sth = np.sin(th)
+  cth = np.cos(th)
+  ph = np.arctan2(y, x) - np.arctan2(a, r)
+  sph = np.sin(ph)
+  cph = np.cos(ph)
+  dx_dr = sth * cph
+  dy_dr = sth * sph
+  dz_dr = cth
+  dx_dth = cth * (r * cph - a * sph)
+  dy_dth = cth * (r * sph + a * cph)
+  dz_dth = -r * sth
+  dx_dph = sth * (-r * sph - a * cph)
+  dy_dph = sth * (r * cph - a * sph)
+  dz_dph = 0.0
+  a_r = dx_dr * a_x + dy_dr * a_y + dz_dr * a_z
+  a_th = dx_dth * a_x + dy_dth * a_y + dz_dth * a_z
+  a_ph = dx_dph * a_x + dy_dph * a_y + dz_dph * a_z
+  return a_r, a_th, a_ph
 
 # Function for converting 3-magnetic field to 4-magnetic field
 def three_field_to_four_field(bbx, bby, bbz, ut, ux, uy, uz, u_x, u_y, u_z):
@@ -904,6 +1226,8 @@ if __name__ == '__main__':
       help='dimension orthogonal to slice for 3D data')
   parser.add_argument('-l', '--location', type=float, default=0.0, \
       help='coordinate value along which slice is to be taken (default: 0)')
+  parser.add_argument('--r_max', type=float, \
+      help='half-width of plot in both coordinates, centered at the origin')
   parser.add_argument('--x1_min', type=float, help='horizontal coordinate of left edge of plot')
   parser.add_argument('--x1_max', type=float, help='horizontal coordinate of right edge of plot')
   parser.add_argument('--x2_min', type=float, help='vertical coordinate of bottom edge of plot')
