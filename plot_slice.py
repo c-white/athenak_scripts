@@ -814,8 +814,7 @@ def main(**kwargs):
       u_t, u_x, u_y, u_z = \
           lower_vector(ut, ux, uy, uz, g_tt, g_tx, g_ty, g_tz, g_xx, g_xy, g_xz, g_yy, g_yz, g_zz)
       names = ('wmhd', 'wmhdrad', 'Bemhd', 'Bemhdrad')
-      if kwargs['variable'] in \
-          ['derived:' + name for name in names]:
+      if kwargs['variable'] in ['derived:' + name for name in names]:
         bbx = quantities['bcc1']
         bby = quantities['bcc2']
         bbz = quantities['bcc3']
