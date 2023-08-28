@@ -340,11 +340,9 @@ def main(**kwargs):
       raise RuntimeError('Unable to find number of ghost cells in input file.')
 
     # Extract adiabatic index from input file metadata
-    if kwargs['variable'] in \
-        ['derived:' + name for name in ('pgas', 'pgas_rho', 'T', 'prad_pgas')] \
-        + ['derived:sigmah_rel'] \
-        + ['derived:' + name for name in ('wgas', 'wgasrad', 'Begas', 'Begasrad')] \
-        + ['derived:cons_hydro_rel_' + name for name in ('t', 'x', 'y', 'z')]:
+    names = ('pgas', 'pgas_rho', 'T', 'prad_pgas', 'sigmah_rel', 'wgas', 'wgasrad', 'Begas', \
+        'Begasrad', 'cons_hydro_rel_t', 'cons_hydro_rel_x', 'cons_hydro_rel_y', 'cons_hydro_rel_z')
+    if kwargs['variable'] in ['derived:' + name for name in names]:
       try:
         gamma_adi = float(input_data['hydro']['gamma'])
       except:
@@ -352,9 +350,9 @@ def main(**kwargs):
           gamma_adi = float(input_data['mhd']['gamma'])
         except:
           raise RuntimeError('Unable to find adiabatic index in input file.')
-    if kwargs['variable'] in ['derived:' + name for name in ('beta_inv_nr', 'beta_inv_rel')] \
-        + ['derived:' + name for name in ('wmhd', 'wmhdrad', 'Bemhd', 'Bemhdrad')] \
-        + ['derived:cons_mhd_rel_' + name for name in ('t', 'x', 'y', 'z')]:
+    names = ('beta_inv_nr', 'beta_inv_rel', 'wmhd', 'wmhdrad', 'Bemhd', 'Bemhdrad', \
+        'cons_mhd_rel_t', 'cons_mhd_rel_x', 'cons_mhd_rel_y', 'cons_mhd_rel_z')
+    if kwargs['variable'] in ['derived:' + name for name in names]:
       try:
         gamma_adi = float(input_data['mhd']['gamma'])
       except:
@@ -383,28 +381,21 @@ def main(**kwargs):
         raise RuntimeError('Unable to find molecular weight in input file.')
 
     # Check input file metadata for relativity
-    if kwargs['variable'] in ['derived:' + name for name in ('vr_nr', 'vth_nr', 'vph_nr')] \
-        + ['derived:' + name for name in ('Br_nr', 'Bth_nr', 'Bph_nr')] \
-        + ['derived:' + name for name in ('pmag_nr', 'beta_inv_nr', 'sigma_nr')] \
-        + ['derived:cons_hydro_nr_' + name for name in ('t', 'x', 'y', 'z')] \
-        + ['derived:cons_em_nr_t'] \
-        + ['derived:cons_mhd_nr_' + name for name in ('t', 'x', 'y', 'z')]:
+    names = ('vr_nr', 'vth_nr', 'vph_nr', 'Br_nr', 'Bth_nr', 'Bph_nr', 'pmag_nr', 'beta_inv_nr', \
+        'sigma_nr', 't', 'x', 'y', 'z', 'cons_em_nr_t', 'cons_mhd_nr_t', 'cons_mhd_nr_x', \
+        'cons_mhd_nr_y', 'cons_mhd_nr_z')
+    if kwargs['variable'] in ['derived:' + name for name in names]:
       assert input_data['coord']['general_rel'] == 'false', \
           '"{0}" is only defined for non-GR data.'.format(variable_name)
-    if kwargs['variable'] in ['derived:uut'] \
-        + ['derived:' + name for name in ('ut', 'ux', 'uy', 'uz', 'ur', 'uth', 'uph')] \
-        + ['derived:' + name for name in ('u_t', 'u_x', 'u_y', 'u_z', 'u_r', 'u_th', 'u_ph')] \
-        + ['derived:' + name for name in ('vx', 'vy', 'vz', 'vr_rel', 'vth_rel', 'vph_rel')] \
-        + ['derived:' + name for name in ('bt', 'bx', 'by', 'bz', 'br', 'bth', 'bph')] \
-        + ['derived:' + name for name in ('b_t', 'b_x', 'b_y', 'b_z', 'b_r', 'b_th', 'b_ph')] \
-        + ['derived:' + name for name in ('Br_rel', 'Bth_rel', 'Bph_rel')] \
-        + ['derived:' + name for name in ('pmag_rel', 'beta_inv_rel', 'sigma_rel', 'sigmah_rel')] \
-        + ['derived:pmag_prad'] \
-        + ['derived:' + name for name in ('wgas', 'wmhd', 'wgasrad', 'wmhdrad')] \
-        + ['derived:' + name for name in ('Begas', 'Bemhd', 'Begasrad', 'Bemhdrad')] \
-        + ['derived:cons_hydro_rel_' + name for name in ('t', 'x', 'y', 'z')] \
-        + ['derived:cons_em_rel_' + name for name in ('t', 'x', 'y', 'z')] \
-        + ['derived:cons_mhd_rel_' + name for name in ('t', 'x', 'y', 'z')]:
+    names = ('uut', 'ut', 'ux', 'uy', 'uz', 'ur', 'uth', 'uph', 'u_t', 'u_x', 'u_y', 'u_z', 'u_r', \
+        'u_th', 'u_ph', 'vx', 'vy', 'vz', 'vr_rel', 'vth_rel', 'vph_rel', 'bt', 'bx', 'by', 'bz', \
+        'br', 'bth', 'bph', 'b_t', 'b_x', 'b_y', 'b_z', 'b_r', 'b_th', 'b_ph', 'Br_rel', \
+        'Bth_rel', 'Bph_rel', 'pmag_rel', 'beta_inv_rel', 'sigma_rel', 'sigmah_rel', 'pmag_prad', \
+        'wgas', 'wmhd', 'wgasrad', 'wmhdrad', 'Begas', 'Bemhd', 'Begasrad', 'Bemhdrad', \
+        'cons_hydro_rel_t', 'cons_hydro_rel_x', 'cons_hydro_rel_y', 'cons_hydro_rel_z', \
+        'cons_em_rel_t', 'cons_em_rel_x', 'cons_em_rel_y', 'cons_em_rel_z', 'cons_mhd_rel_t', \
+        'cons_mhd_rel_x', 'cons_mhd_rel_y', 'cons_mhd_rel_z')
+    if kwargs['variable'] in ['derived:' + name for name in names]:
       assert input_data['coord']['general_rel'] == 'true', \
           '"{0}" is only defined for GR data.'.format(variable_name)
     if kwargs['horizon'] or kwargs['horizon_mask'] or kwargs['ergosphere']:
@@ -412,20 +403,15 @@ def main(**kwargs):
           '"horizon", "horizon_mask", and "ergosphere" options only pertain to GR data.'
 
     # Extract black hole spin from input file metadata
-    if kwargs['variable'] in ['derived:uut'] \
-        + ['derived:' + name for name in ('ut', 'ux', 'uy', 'uz', 'ur', 'uth', 'uph')] \
-        + ['derived:' + name for name in ('u_t', 'u_x', 'u_y', 'u_z', 'u_r', 'u_th', 'u_ph')] \
-        + ['derived:' + name for name in ('vx', 'vy', 'vz', 'vr_rel', 'vth_rel', 'vph_rel')] \
-        + ['derived:' + name for name in ('bt', 'bx', 'by', 'bz', 'br', 'bth', 'bph')] \
-        + ['derived:' + name for name in ('b_t', 'b_x', 'b_y', 'b_z', 'b_r', 'b_th', 'b_ph')] \
-        + ['derived:' + name for name in ('Br_rel', 'Bth_rel', 'Bph_rel')] \
-        + ['derived:' + name for name in ('pmag_rel', 'beta_inv_rel', 'sigma_rel', 'sigmah_rel')] \
-        + ['derived:pmag_prad'] \
-        + ['derived:' + name for name in ('wmhd', 'wmhdrad')] \
-        + ['derived:' + name for name in ('Begas', 'Bemhd', 'Begasrad', 'Bemhdrad')] \
-        + ['derived:cons_hydro_rel_' + name for name in ('t', 'x', 'y', 'z')] \
-        + ['derived:cons_em_rel_' + name for name in ('t', 'x', 'y', 'z')] \
-        + ['derived:cons_mhd_rel_' + name for name in ('t', 'x', 'y', 'z')]:
+    names = ('uut', 'ut', 'ux', 'uy', 'uz', 'ur', 'uth', 'uph', 'u_t', 'u_x', 'u_y', 'u_z', 'u_r', \
+        'u_th', 'u_ph', 'vx', 'vy', 'vz', 'vr_rel', 'vth_rel', 'vph_rel', 'bt', 'bx', 'by', 'bz', \
+        'br', 'bth', 'bph', 'b_t', 'b_x', 'b_y', 'b_z', 'b_r', 'b_th', 'b_ph', 'Br_rel', \
+        'Bth_rel', 'Bph_rel', 'pmag_rel', 'beta_inv_rel', 'sigma_rel', 'sigmah_rel', 'pmag_prad', \
+        'wmhd', 'wmhdrad', 'Begas', 'Bemhd', 'Begasrad', 'Bemhdrad', 'cons_hydro_rel_t', \
+        'cons_hydro_rel_x', 'cons_hydro_rel_y', 'cons_hydro_rel_z', 'cons_em_rel_t', \
+        'cons_em_rel_x', 'cons_em_rel_y', 'cons_em_rel_z', 'cons_mhd_rel_t', 'cons_mhd_rel_x', \
+        'cons_mhd_rel_y', 'cons_mhd_rel_z')
+    if kwargs['variable'] in ['derived:' + name for name in names]:
       try:
         bh_a = float(input_data['coord']['a'])
       except:
@@ -573,7 +559,8 @@ def main(**kwargs):
     quantities[name] = np.array(quantities[name])
 
   # Calculate gas pressure or related quantity
-  if kwargs['variable'] in ['derived:' + name for name in ('pgas', 'pgas_rho', 'T', 'prad_pgas')]:
+  names = ('pgas', 'pgas_rho', 'T', 'prad_pgas')
+  if kwargs['variable'] in ['derived:' + name for name in names]:
     pgas = (gamma_adi - 1.0) * quantities['eint']
     if kwargs['variable'] == 'derived:pgas':
       quantity = pgas
@@ -586,7 +573,8 @@ def main(**kwargs):
       quantity = prad / pgas
 
   # Calculate non-relativistic velocity
-  elif kwargs['variable'] in ['derived:' + name for name in ('vr_nr', 'vth_nr', 'vph_nr')]:
+  names = ('vr_nr', 'vth_nr', 'vph_nr')
+  if kwargs['variable'] in ['derived:' + name for name in names]:
     x, y, z = \
         xyz(num_blocks_used, block_nx1, block_nx2, extents, kwargs['dimension'], kwargs['location'])
     vx = quantities['velx']
@@ -601,10 +589,9 @@ def main(**kwargs):
       quantity = vph
 
   # Calculate relativistic velocity
-  elif kwargs['variable'] in ['derived:uut'] \
-      + ['derived:' + name for name in ('ut', 'ux', 'uy', 'uz', 'ur', 'uth', 'uph')] \
-      + ['derived:' + name for name in ('u_t', 'u_x', 'u_y', 'u_z', 'u_r', 'u_th', 'u_ph')] \
-      + ['derived:' + name for name in ('vx', 'vy', 'vz', 'vr_rel', 'vth_rel', 'vph_rel')]:
+  names = ('uut', 'ut', 'ux', 'uy', 'uz', 'ur', 'uth', 'uph', 'u_t', 'u_x', 'u_y', 'u_z', 'u_r', \
+      'u_th', 'u_ph', 'vx', 'vy', 'vz', 'vr_rel', 'vth_rel', 'vph_rel')
+  if kwargs['variable'] in ['derived:' + name for name in names]:
     x, y, z = \
         xyz(num_blocks_used, block_nx1, block_nx2, extents, kwargs['dimension'], kwargs['location'])
     alpha, betax, betay, betaz, g_tt, g_tx, g_ty, g_tz, g_xx, g_xy, g_xz, g_yy, g_yz, g_zz = \
@@ -615,7 +602,8 @@ def main(**kwargs):
     uut = normal_lorentz(uux, uuy, uuz, g_xx, g_xy, g_xz, g_yy, g_yz, g_zz)
     if kwargs['variable'] == 'derived:uut':
       quantity = uut
-    else:
+    names = ('ut', 'ux', 'uy', 'uz', 'vx', 'vy', 'vz')
+    if kwargs['variable'] in ['derived:' + name for name in names]:
       ut, ux, uy, uz = norm_to_coord(uut, uux, uuy, uuz, alpha, betax, betay, betaz)
       if kwargs['variable'] == 'derived:ut':
         quantity = ut
@@ -629,50 +617,58 @@ def main(**kwargs):
         quantity = ux / ut
       elif kwargs['variable'] == 'derived:vy':
         quantity = uy / ut
-      elif kwargs['variable'] == 'derived:vz':
-        quantity = uz / ut
-      elif kwargs['variable'] in ['derived:' + name for name in ('ur', 'uth', 'uph')] \
-            + ['derived:' + name for name in ('vr_rel', 'vth_rel', 'vph_rel')]:
-        ur, uth, uph = cks_to_sks_con(ux, uy, uz, bh_a, x, y, z)
-        if kwargs['variable'] == 'derived:ur':
-          quantity = ur
-        elif kwargs['variable'] == 'derived:uth':
-          quantity = uth
-        elif kwargs['variable'] == 'derived:uph':
-          quantity = uph
-        elif kwargs['variable'] == 'derived:vr_rel':
-          quantity = ur / ut
-        elif kwargs['variable'] == 'derived:vth_rel':
-          quantity = uth / ut
-        else:
-          quantity = uph / ut
       else:
-        u_t, u_x, u_y, u_z = \
-            lower_vector(ut, ux, uy, uz, g_tt, g_tx, g_ty, g_tz, g_xx, g_xy, g_xz, g_yy, g_yz, g_zz)
-        if kwargs['variable'] == 'derived:u_t':
-          quantity = u_t
-        elif kwargs['variable'] == 'derived:u_x':
-          quantity = u_x
-        elif kwargs['variable'] == 'derived:u_y':
-          quantity = u_y
-        elif kwargs['variable'] == 'derived:u_z':
-          quantity = u_z
-        else:
-          u_r, u_th, u_ph = cks_to_sks_cov(u_x, u_y, u_z, bh_a, x, y, z)
-          if kwargs['variable'] == 'derived:u_r':
-            quantity = u_r
-          elif kwargs['variable'] == 'derived:u_th':
-            quantity = u_th
-          else:
-            quantity = u_ph
+        quantity = uz / ut
+    names = ('ur', 'uth', 'uph', 'vr_rel', 'vth_rel', 'vph_rel')
+    if kwargs['variable'] in ['derived:' + name for name in names]:
+      ut, ux, uy, uz = norm_to_coord(uut, uux, uuy, uuz, alpha, betax, betay, betaz)
+      ur, uth, uph = cks_to_sks_con(ux, uy, uz, bh_a, x, y, z)
+      if kwargs['variable'] == 'derived:ur':
+        quantity = ur
+      elif kwargs['variable'] == 'derived:uth':
+        quantity = uth
+      elif kwargs['variable'] == 'derived:uph':
+        quantity = uph
+      elif kwargs['variable'] == 'derived:vr_rel':
+        quantity = ur / ut
+      elif kwargs['variable'] == 'derived:vth_rel':
+        quantity = uth / ut
+      else:
+        quantity = uph / ut
+    names = ('u_t', 'u_x', 'u_y', 'u_z')
+    if kwargs['variable'] in ['derived:' + name for name in names]:
+      ut, ux, uy, uz = norm_to_coord(uut, uux, uuy, uuz, alpha, betax, betay, betaz)
+      u_t, u_x, u_y, u_z = \
+          lower_vector(ut, ux, uy, uz, g_tt, g_tx, g_ty, g_tz, g_xx, g_xy, g_xz, g_yy, g_yz, g_zz)
+      if kwargs['variable'] == 'derived:u_t':
+        quantity = u_t
+      elif kwargs['variable'] == 'derived:u_x':
+        quantity = u_x
+      elif kwargs['variable'] == 'derived:u_y':
+        quantity = u_y
+      else:
+        quantity = u_z
+    names = ('u_r', 'u_th', 'u_ph')
+    if kwargs['variable'] in ['derived:' + name for name in names]:
+      ut, ux, uy, uz = norm_to_coord(uut, uux, uuy, uuz, alpha, betax, betay, betaz)
+      u_t, u_x, u_y, u_z = \
+          lower_vector(ut, ux, uy, uz, g_tt, g_tx, g_ty, g_tz, g_xx, g_xy, g_xz, g_yy, g_yz, g_zz)
+      u_r, u_th, u_ph = cks_to_sks_cov(u_x, u_y, u_z, bh_a, x, y, z)
+      if kwargs['variable'] == 'derived:u_r':
+        quantity = u_r
+      elif kwargs['variable'] == 'derived:u_th':
+        quantity = u_th
+      else:
+        quantity = u_ph
 
   # Calculate non-relativistic magnetic field or related quantity
-  elif kwargs['variable'] in ['derived:' + name for name in ('Br_nr', 'Bth_nr', 'Bph_nr')] \
-      + ['derived:' + name for name in ('pmag_nr', 'beta_inv_nr', 'sigma_nr')]:
+  names = ('Br_nr', 'Bth_nr', 'Bph_nr', 'pmag_nr', 'beta_inv_nr', 'sigma_nr')
+  if kwargs['variable'] in ['derived:' + name for name in names]:
     bbx = quantities['bcc1']
     bby = quantities['bcc2']
     bbz = quantities['bcc3']
-    if kwargs['variable'] in ['derived:' + name for name in ('Br_nr', 'Bth_nr', 'Bph_nr')]:
+    names = ('Br_nr', 'Bth_nr', 'Bph_nr')
+    if kwargs['variable'] in ['derived:' + name for name in names]:
       x, y, z = xyz(num_blocks_used, block_nx1, block_nx2, extents, kwargs['dimension'], \
           kwargs['location'])
       bbr, bbth, bbph = cart_to_sph(bbx, bby, bbz, x, y, z)
@@ -682,7 +678,8 @@ def main(**kwargs):
         quantity = bbth
       else:
         quantity = bbph
-    else:
+    names = ('pmag_nr', 'beta_inv_nr', 'sigma_nr')
+    if kwargs['variable'] in ['derived:' + name for name in names]:
       pmag = 0.5 * (bbx ** 2 + bby ** 2 + bbz ** 2)
       if kwargs['variable'] == 'derived:pmag_nr':
         quantity = pmag
@@ -693,12 +690,10 @@ def main(**kwargs):
         quantity = 2.0 * pmag / quantities['dens']
 
   # Calculate relativistic magnetic field or related quantity
-  elif kwargs['variable'] in \
-      ['derived:' + name for name in ('bt', 'bx', 'by', 'bz', 'br', 'bth', 'bph')] \
-      + ['derived:' + name for name in ('b_t', 'b_x', 'b_y', 'b_z', 'b_r', 'b_th', 'b_ph')] \
-      + ['derived:' + name for name in ('Br_rel', 'Bth_rel', 'Bph_rel')] \
-      + ['derived:' + name for name in ('pmag_rel', 'beta_inv_rel', 'sigma_rel', 'sigmah_rel')] \
-      + ['derived:pmag_prad']:
+  names = ('bt', 'bx', 'by', 'bz', 'br', 'bth', 'bph', 'b_t', 'b_x', 'b_y', 'b_z', 'b_r', 'b_th', \
+      'b_ph', 'Br_rel', 'Bth_rel', 'Bph_rel', 'pmag_rel', 'beta_inv_rel', 'sigma_rel', \
+      'sigmah_rel', 'pmag_prad')
+  if kwargs['variable'] in ['derived:' + name for name in names]:
     x, y, z = \
         xyz(num_blocks_used, block_nx1, block_nx2, extents, kwargs['dimension'], kwargs['location'])
     alpha, betax, betay, betaz, g_tt, g_tx, g_ty, g_tz, g_xx, g_xy, g_xz, g_yy, g_yz, g_zz = \
@@ -714,7 +709,8 @@ def main(**kwargs):
     bby = quantities['bcc2']
     bbz = quantities['bcc3']
     bt, bx, by, bz = three_field_to_four_field(bbx, bby, bbz, ut, ux, uy, uz, u_x, u_y, u_z)
-    if kwargs['variable'] in ['derived:' + name for name in ('bt', 'bx', 'by', 'bz')]:
+    names = ('bt', 'bx', 'by', 'bz')
+    if kwargs['variable'] in ['derived:' + name for name in names]:
       if kwargs['variable'] == 'derived:bt':
         quantity = bt
       elif kwargs['variable'] == 'derived:bx':
@@ -723,7 +719,8 @@ def main(**kwargs):
         quantity = by
       else:
         quantity = bz
-    elif kwargs['variable'] in ['derived:' + name for name in ('br', 'bth', 'bph')]:
+    names = ('br', 'bth', 'bph')
+    if kwargs['variable'] in ['derived:' + name for name in names]:
       br, bth, bph = cks_to_sks_con(bx, by, bz, bh_a, x, y, z)
       if kwargs['variable'] == 'derived:br':
         quantity = br
@@ -731,7 +728,8 @@ def main(**kwargs):
         quantity = bth
       else:
         quantity = bph
-    elif kwargs['variable'] in ['derived:' + name for name in ('b_t', 'b_x', 'b_y', 'b_z')]:
+    names = ('b_t', 'b_x', 'b_y', 'b_z')
+    if kwargs['variable'] in ['derived:' + name for name in names]:
       b_t, b_x, b_y, b_z = \
           lower_vector(bt, bx, by, bz, g_tt, g_tx, g_ty, g_tz, g_xx, g_xy, g_xz, g_yy, g_yz, g_zz)
       if kwargs['variable'] == 'derived:b_t':
@@ -742,7 +740,8 @@ def main(**kwargs):
         quantity = b_y
       else:
         quantity = b_z
-    elif kwargs['variable'] in ['derived:' + name for name in ('b_r', 'b_th', 'b_ph')]:
+    names = ('b_r', 'b_th', 'b_ph')
+    if kwargs['variable'] in ['derived:' + name for name in names]:
       b_t, b_x, b_y, b_z = \
           lower_vector(bt, bx, by, bz, g_tt, g_tx, g_ty, g_tz, g_xx, g_xy, g_xz, g_yy, g_yz, g_zz)
       b_r, b_th, b_ph = cks_to_sks_cov(b_x, b_y, b_z, bh_a, x, y, z)
@@ -752,7 +751,8 @@ def main(**kwargs):
         quantity = b_th
       else:
         quantity = b_ph
-    elif kwargs['variable'] in ['derived:' + name for name in ('Br_rel', 'Bth_rel', 'Bph_rel')]:
+    names = ('Br_rel', 'Bth_rel', 'Bph_rel')
+    if kwargs['variable'] in ['derived:' + name for name in names]:
       ur, uth, uph = cks_to_sks_con(ux, uy, uz, bh_a, x, y, z)
       br, bth, bph = cks_to_sks_con(bx, by, bz, bh_a, x, y, z)
       if kwargs['variable'] == 'derived:Br_rel':
@@ -761,7 +761,8 @@ def main(**kwargs):
         quantity = bth * ut - bt * uth
       else:
         quantity = bph * ut - bt * uph
-    else:
+    names = ('pmag_rel', 'beta_inv_rel', 'sigma_rel', 'sigmah_rel', 'pmag_prad')
+    if kwargs['variable'] in ['derived:' + name for name in names]:
       b_t, b_x, b_y, b_z = \
           lower_vector(bt, bx, by, bz, g_tt, g_tx, g_ty, g_tz, g_xx, g_xy, g_xz, g_yy, g_yz, g_zz)
       pmag = 0.5 * (b_t * bt + b_x * bx + b_y * by + b_z * bz)
@@ -783,23 +784,24 @@ def main(**kwargs):
           quantity = pmag / prad
 
   # Calculate relativistic radiation quantity
-  elif kwargs['variable'] == 'derived:prad':
+  if kwargs['variable'] == 'derived:prad':
     quantity = quantities['r00_ff'] / 3.0
 
   # Calculate relativistic enthalpy density or Bernoulli parameter
-  elif kwargs['variable'] in \
-      ['derived:' + name for name in ('wgas', 'wmhd', 'wgasrad', 'wmhdrad')] \
-      + ['derived:' + name for name in ('Begas', 'Bemhd', 'Begasrad', 'Bemhdrad')]:
+  names = ('wgas', 'wmhd', 'wgasrad', 'wmhdrad', 'Begas', 'Bemhd', 'Begasrad', 'Bemhdrad')
+  if kwargs['variable'] in ['derived:' + name for name in names]:
     rho = quantities['dens']
     ugas = quantities['eint']
     w = rho + gamma_adi * ugas
-    if kwargs['variable'] in \
-        ['derived:' + name for name in ('wgasrad', 'wmhdrad', 'Begasrad', 'Bemhdrad')]:
+    names = ('wgasrad', 'wmhdrad', 'Begasrad', 'Bemhdrad')
+    if kwargs['variable'] in ['derived:' + name for name in names]:
       urad = quantities['r00_ff']
       w += 4.0/3.0 * urad
-    if kwargs['variable'] in ['derived:' + name for name in ('wgas', 'wgasrad')]:
+    names = ('wgas', 'wgasrad')
+    if kwargs['variable'] in ['derived:' + name for name in names]:
       quantity = w
-    else:
+    names = ('wmhd', 'wmhdrad', 'Begas', 'Bemhd', 'Begasrad', 'Bemhdrad')
+    if kwargs['variable'] in ['derived:' + name for name in names]:
       x, y, z = xyz(num_blocks_used, block_nx1, block_nx2, extents, kwargs['dimension'], \
           kwargs['location'])
       alpha, betax, betay, betaz, g_tt, g_tx, g_ty, g_tz, g_xx, g_xy, g_xz, g_yy, g_yz, g_zz = \
@@ -811,8 +813,9 @@ def main(**kwargs):
       ut, ux, uy, uz = norm_to_coord(uut, uux, uuy, uuz, alpha, betax, betay, betaz)
       u_t, u_x, u_y, u_z = \
           lower_vector(ut, ux, uy, uz, g_tt, g_tx, g_ty, g_tz, g_xx, g_xy, g_xz, g_yy, g_yz, g_zz)
+      names = ('wmhd', 'wmhdrad', 'Bemhd', 'Bemhdrad')
       if kwargs['variable'] in \
-          ['derived:' + name for name in ('wmhd', 'wmhdrad', 'Bemhd', 'Bemhdrad')]:
+          ['derived:' + name for name in names]:
         bbx = quantities['bcc1']
         bby = quantities['bcc2']
         bbz = quantities['bcc3']
@@ -820,45 +823,53 @@ def main(**kwargs):
         b_t, b_x, b_y, b_z = \
             lower_vector(bt, bx, by, bz, g_tt, g_tx, g_ty, g_tz, g_xx, g_xy, g_xz, g_yy, g_yz, g_zz)
         w += b_t * bt + b_x * bx + b_y * by + b_z * bz
-      if kwargs['variable'] in ['derived:' + name for name in ('wmhd', 'wmhdrad')]:
+      names = ('wmhd', 'wmhdrad')
+      if kwargs['variable'] in ['derived:' + name for name in names]:
         quantity = w
-      else:
+      names = ('Begas', 'Bemhd', 'Begasrad', 'Bemhdrad')
+      if kwargs['variable'] in ['derived:' + name for name in names]:
         quantity = -u_t * w / rho - 1.0
 
   # Calculate non-relativistic conserved quantity
-  elif kwargs['variable'] in ['derived:cons_hydro_nr_' + name for name in ('t', 'x', 'y', 'z')] \
-      + ['derived:cons_em_nr_t'] + ['derived:cons_mhd_nr_' + name for name in ('t', 'x', 'y', 'z')]:
-    if kwargs['variable'] in ['derived:cons_' + name + '_nr_t' for name in ('hydro', 'mhd')]:
+  names = ('cons_hydro_nr_t', 'cons_hydro_nr_x', 'cons_hydro_nr_y', 'cons_hydro_nr_z', \
+      'cons_em_nr_t', 'cons_mhd_nr_t', 'cons_mhd_nr_x', 'cons_mhd_nr_y', 'cons_mhd_nr_z')
+  if kwargs['variable'] in ['derived:' + name for name in names]:
+    quantity = 0.0
+    names = ('cons_hydro_nr_t', 'cons_mhd_nr_t')
+    if kwargs['variable'] in ['derived:' + name for name in names]:
       rho = quantities['dens']
       ugas = quantities['eint']
       vx = quantities['velx']
       vy = quantities['vely']
       vz = quantities['velz']
       quantity = 0.5 * rho * (vx ** 2 + vy ** 2 + vz ** 2) + ugas
-    elif kwargs['variable'] in ['derived:cons_' + name + '_nr_x' for name in ('hydro', 'mhd')]:
+    names = ('cons_hydro_nr_x', 'cons_mhd_nr_x')
+    if kwargs['variable'] in ['derived:' + name for name in names]:
       rho = quantities['dens']
       vx = quantities['velx']
       quantity = rho * vx
-    elif kwargs['variable'] in ['derived:cons_' + name + '_nr_y' for name in ('hydro', 'mhd')]:
+    names = ('cons_hydro_nr_y', 'cons_mhd_nr_y')
+    if kwargs['variable'] in ['derived:' + name for name in names]:
       rho = quantities['dens']
       vy = quantities['vely']
       quantity = rho * vy
-    elif kwargs['variable'] in ['derived:cons_' + name + '_nr_z' for name in ('hydro', 'mhd')]:
+    names = ('cons_hydro_nr_z', 'cons_mhd_nr_z')
+    if kwargs['variable'] in ['derived:' + name for name in names]:
       rho = quantities['dens']
       vz = quantities['velz']
       quantity = rho * vz
-    else:
-      quantity = 0.0
-    if kwargs['variable'] in ['derived:cons_' + name + '_nr_t' for name in ('em', 'mhd')]:
+    names = ('cons_em_nr_t', 'cons_mhd_nr_t')
+    if kwargs['variable'] in ['derived:' + name for name in names]:
       bbx = quantities['bcc1']
       bby = quantities['bcc2']
       bbz = quantities['bcc3']
       quantity += 0.5 * (bbx ** 2 + bby ** 2 + bbz ** 2)
 
   # Calculate relativistic conserved quantity
-  elif kwargs['variable'] in ['derived:cons_hydro_rel_' + name for name in ('t', 'x', 'y', 'z')] \
-      + ['derived:cons_em_rel_' + name for name in ('t', 'x', 'y', 'z')] \
-      + ['derived:cons_mhd_rel_' + name for name in ('t', 'x', 'y', 'z')]:
+  names = ('cons_hydro_rel_t', 'cons_hydro_rel_x', 'cons_hydro_rel_y', 'cons_hydro_rel_z', \
+      'cons_em_rel_t', 'cons_em_rel_x', 'cons_em_rel_y', 'cons_em_rel_z', 'cons_mhd_rel_t', \
+      'cons_mhd_rel_x', 'cons_mhd_rel_y', 'cons_mhd_rel_z')
+  if kwargs['variable'] in ['derived:' + name for name in names]:
     x, y, z = xyz(num_blocks_used, block_nx1, block_nx2, extents, kwargs['dimension'], \
         kwargs['location'])
     alpha, betax, betay, betaz, g_tt, g_tx, g_ty, g_tz, g_xx, g_xy, g_xz, g_yy, g_yz, g_zz = \
@@ -870,24 +881,29 @@ def main(**kwargs):
     ut, ux, uy, uz = norm_to_coord(uut, uux, uuy, uuz, alpha, betax, betay, betaz)
     u_t, u_x, u_y, u_z = \
         lower_vector(ut, ux, uy, uz, g_tt, g_tx, g_ty, g_tz, g_xx, g_xy, g_xz, g_yy, g_yz, g_zz)
-    if kwargs['variable'] in ['derived:cons_hydro_rel_' + name for name in ('t', 'x', 'y', 'z')] \
-        + ['derived:cons_mhd_rel_' + name for name in ('t', 'x', 'y', 'z')]:
+    quantity = 0.0
+    names = ('cons_hydro_rel_t', 'cons_hydro_rel_x', 'cons_hydro_rel_y', 'cons_hydro_rel_z', \
+        'cons_mhd_rel_t', 'cons_mhd_rel_x', 'cons_mhd_rel_y', 'cons_mhd_rel_z')
+    if kwargs['variable'] in ['derived:' + name for name in names]:
       rho = quantities['dens']
       ugas = quantities['eint']
       pgas = (gamma_adi - 1.0) * ugas
       wgas = rho + ugas + pgas
-      if kwargs['variable'] in ['derived:cons_' + name + '_rel_t' for name in ('hydro', 'mhd')]:
+      names = ('cond_hydro_rel_t', 'cons_mhd_rel_t')
+      if kwargs['variable'] in ['derived:' + name for name in names]:
         quantity = wgas * ut * u_t + pgas
-      elif kwargs['variable'] in ['derived:cons_' + name + '_rel_x' for name in ('hydro', 'mhd')]:
+      names = ('cond_hydro_rel_x', 'cons_mhd_rel_x')
+      if kwargs['variable'] in ['derived:' + name for name in names]:
         quantity = wgas * ut * u_x
-      elif kwargs['variable'] in ['derived:cons_' + name + '_rel_y' for name in ('hydro', 'mhd')]:
+      names = ('cond_hydro_rel_y', 'cons_mhd_rel_y')
+      if kwargs['variable'] in ['derived:' + name for name in names]:
         quantity = wgas * ut * u_y
-      else:
+      names = ('cond_hydro_rel_z', 'cons_mhd_rel_z')
+      if kwargs['variable'] in ['derived:' + name for name in names]:
         quantity = wgas * ut * u_z
-    else:
-      quantity = 0.0
-    if kwargs['variable'] in ['derived:cons_em_rel_' + name for name in ('t', 'x', 'y', 'z')] \
-        + ['derived:cons_mhd_rel_' + name for name in ('t', 'x', 'y', 'z')]:
+    names = ('cons_em_rel_t', 'cons_em_rel_x', 'cons_em_rel_y', 'cons_em_rel_z', 'cons_mhd_rel_t', \
+        'cons_mhd_rel_x', 'cons_mhd_rel_y', 'cons_mhd_rel_z')
+    if kwargs['variable'] in ['derived:' + name for name in names]:
       bbx = quantities['bcc1']
       bby = quantities['bcc2']
       bbz = quantities['bcc3']
@@ -896,17 +912,21 @@ def main(**kwargs):
           lower_vector(bt, bx, by, bz, g_tt, g_tx, g_ty, g_tz, g_xx, g_xy, g_xz, g_yy, g_yz, g_zz)
       umag = 0.5 * (b_t * bt + b_x * bx + b_y * by + b_z * bz)
       pmag = umag
-      if kwargs['variable'] in ['derived:cons_' + name + '_rel_t' for name in ('em', 'mhd')]:
+      names = ('cond_em_rel_t', 'cons_mhd_rel_t')
+      if kwargs['variable'] in ['derived:' + name for name in names]:
         quantity += (umag + pmag) * ut * u_t + pmag - bt * b_t
-      elif kwargs['variable'] in ['derived:cons_' + name + '_rel_x' for name in ('em', 'mhd')]:
+      names = ('cond_em_rel_x', 'cons_mhd_rel_x')
+      if kwargs['variable'] in ['derived:' + name for name in names]:
         quantity += (umag + pmag) * ut * u_x - bt * b_x
-      elif kwargs['variable'] in ['derived:cons_' + name + '_rel_y' for name in ('em', 'mhd')]:
+      names = ('cond_em_rel_y', 'cons_mhd_rel_y')
+      if kwargs['variable'] in ['derived:' + name for name in names]:
         quantity += (umag + pmag) * ut * u_y - bt * b_y
-      else:
+      names = ('cond_em_rel_z', 'cons_mhd_rel_z')
+      if kwargs['variable'] in ['derived:' + name for name in names]:
         quantity += (umag + pmag) * ut * u_z - bt * b_z
 
   # Extract quantity without derivation
-  else:
+  if kwargs['variable'][:8] != 'derived:':
     quantity = quantities[variable_name]
 
   # Calculate colors
