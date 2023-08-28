@@ -151,99 +151,51 @@ def main(**kwargs):
   # Set derived dependencies
   derived_dependencies = {}
   derived_dependencies['pgas'] = ('eint',)
-  derived_dependencies['pgas_rho'] = ('dens', 'eint')
-  derived_dependencies['T'] = ('dens', 'eint')
-  derived_dependencies['vr_nr'] = ('velx', 'vely', 'velz')
-  derived_dependencies['vth_nr'] = ('velx', 'vely', 'velz')
-  derived_dependencies['vph_nr'] = ('velx', 'vely', 'velz')
-  derived_dependencies['uut'] = ('velx', 'vely', 'velz')
-  derived_dependencies['ut'] = ('velx', 'vely', 'velz')
-  derived_dependencies['ux'] = ('velx', 'vely', 'velz')
-  derived_dependencies['uy'] = ('velx', 'vely', 'velz')
-  derived_dependencies['uz'] = ('velx', 'vely', 'velz')
-  derived_dependencies['ur'] = ('velx', 'vely', 'velz')
-  derived_dependencies['uth'] = ('velx', 'vely', 'velz')
-  derived_dependencies['uph'] = ('velx', 'vely', 'velz')
-  derived_dependencies['u_t'] = ('velx', 'vely', 'velz')
-  derived_dependencies['u_x'] = ('velx', 'vely', 'velz')
-  derived_dependencies['u_y'] = ('velx', 'vely', 'velz')
-  derived_dependencies['u_z'] = ('velx', 'vely', 'velz')
-  derived_dependencies['u_r'] = ('velx', 'vely', 'velz')
-  derived_dependencies['u_th'] = ('velx', 'vely', 'velz')
-  derived_dependencies['u_ph'] = ('velx', 'vely', 'velz')
-  derived_dependencies['vx'] = ('velx', 'vely', 'velz')
-  derived_dependencies['vy'] = ('velx', 'vely', 'velz')
-  derived_dependencies['vz'] = ('velx', 'vely', 'velz')
-  derived_dependencies['vr_rel'] = ('velx', 'vely', 'velz')
-  derived_dependencies['vth_rel'] = ('velx', 'vely', 'velz')
-  derived_dependencies['vph_rel'] = ('velx', 'vely', 'velz')
-  derived_dependencies['Br_nr'] = ('bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['Bth_nr'] = ('bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['Bph_nr'] = ('bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['pmag_nr'] = ('bcc1', 'bcc2', 'bcc3')
+  names = ('pgas_rho', 'T', 'wgas')
+  for name in names:
+    derived_dependencies[name] = ('dens', 'eint')
+  names = ('vr_nr', 'vth_nr', 'vph_nr', 'uut', 'ut', 'ux', 'uy', 'uz', 'ur', 'uth', 'uph', 'u_t', \
+      'u_x', 'u_y', 'u_z', 'u_r', 'u_th', 'u_ph', 'vx', 'vy', 'vz', 'vr_rel', 'vth_rel', 'vph_rel')
+  for name in names:
+    derived_dependencies[name] = ('velx', 'vely', 'velz')
+  names = ('Br_nr', 'Bth_nr', 'Bph_nr', 'pmag_nr', 'cons_em_nr_t')
+  for name in names:
+    derived_dependencies[name] = ('bcc1', 'bcc2', 'bcc3')
   derived_dependencies['beta_inv_nr'] = ('eint', 'bcc1', 'bcc2', 'bcc3')
   derived_dependencies['sigma_nr'] = ('dens', 'bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['bt'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['bx'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['by'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['bz'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['br'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['bth'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['bph'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['b_t'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['b_x'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['b_y'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['b_z'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['b_r'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['b_th'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['b_ph'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['Br_rel'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['Bth_rel'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['Bph_rel'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['pmag_rel'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
+  names = ('bt', 'bx', 'by', 'bz', 'br', 'bth', 'bph', 'b_t', 'b_x', 'b_y', 'b_z', 'b_r', 'b_th', \
+      'b_ph', 'Br_rel', 'Bth_rel', 'Bph_rel', 'pmag_rel', 'cons_em_rel_t', 'cons_em_rel_x', \
+      'cons_em_rel_y', 'cons_em_rel_z')
+  for name in names:
+    derived_dependencies[name] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
   derived_dependencies['beta_inv_rel'] = ('eint', 'velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
   derived_dependencies['sigma_rel'] = ('dens', 'velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['sigmah_rel'] = \
-      ('dens', 'eint', 'velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
+  names = ('sigmah_rel', 'wmhd', 'Bemhd', 'cons_mhd_nr_t', 'cons_mhd_rel_t', 'cons_mhd_rel_x', \
+      'cons_mhd_rel_y', 'cons_mhd_rel_z')
+  for name in names:
+    derived_dependencies[name] = ('dens', 'eint', 'velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
   derived_dependencies['prad'] = ('r00_ff',)
   derived_dependencies['prad_pgas'] = ('eint', 'r00_ff')
   derived_dependencies['pmag_prad'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3', 'r00_ff')
-  derived_dependencies['wgas'] = ('dens', 'eint')
-  derived_dependencies['wmhd'] = ('dens', 'eint', 'velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
   derived_dependencies['wgasrad'] = ('dens', 'eint', 'r00_ff')
-  derived_dependencies['wmhdrad'] = \
-      ('dens', 'eint', 'velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3', 'r00_ff')
-  derived_dependencies['Begas'] = ('dens', 'eint', 'velx', 'vely', 'velz')
-  derived_dependencies['Bemhd'] = ('dens', 'eint', 'velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
+  names = ('wmhdrad', 'Bemhdrad')
+  for name in names:
+    derived_dependencies[name] = \
+        ('dens', 'eint', 'velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3', 'r00_ff')
+  names = ('Begas', 'cons_hydro_nr_t', 'cons_hydro_rel_t', 'cons_hydro_rel_x', 'cons_hydro_rel_y', \
+      'cons_hydro_rel_z')
+  for name in names:
+    derived_dependencies[name] = ('dens', 'eint', 'velx', 'vely', 'velz')
   derived_dependencies['Begasrad'] = ('dens', 'eint', 'velx', 'vely', 'velz', 'r00_ff')
-  derived_dependencies['Bemhdrad'] = \
-      ('dens', 'eint', 'velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3', 'r00_ff')
-  derived_dependencies['cons_hydro_nr_t'] = ('dens', 'eint', 'velx', 'vely', 'velz')
-  derived_dependencies['cons_hydro_nr_x'] = ('dens', 'velx')
-  derived_dependencies['cons_hydro_nr_y'] = ('dens', 'vely')
-  derived_dependencies['cons_hydro_nr_z'] = ('dens', 'velz')
-  derived_dependencies['cons_em_nr_t'] = ('bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['cons_mhd_nr_t'] = \
-      ('dens', 'eint', 'velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['cons_mhd_nr_x'] = ('dens', 'velx')
-  derived_dependencies['cons_mhd_nr_y'] = ('dens', 'vely')
-  derived_dependencies['cons_mhd_nr_z'] = ('dens', 'velz')
-  derived_dependencies['cons_hydro_rel_t'] = ('dens', 'eint', 'velx', 'vely', 'velz')
-  derived_dependencies['cons_hydro_rel_x'] = ('dens', 'eint', 'velx', 'vely', 'velz')
-  derived_dependencies['cons_hydro_rel_y'] = ('dens', 'eint', 'velx', 'vely', 'velz')
-  derived_dependencies['cons_hydro_rel_z'] = ('dens', 'eint', 'velx', 'vely', 'velz')
-  derived_dependencies['cons_em_rel_t'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['cons_em_rel_x'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['cons_em_rel_y'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['cons_em_rel_z'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['cons_mhd_rel_t'] = \
-      ('dens', 'eint', 'velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['cons_mhd_rel_x'] = \
-      ('dens', 'eint', 'velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['cons_mhd_rel_y'] = \
-      ('dens', 'eint', 'velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['cons_mhd_rel_z'] = \
-      ('dens', 'eint', 'velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
+  names = ('cons_hydro_nr_x', 'cons_mhd_nr_x')
+  for name in names:
+    derived_dependencies[name] = ('dens', 'velx')
+  names = ('cons_hydro_nr_y', 'cons_mhd_nr_y')
+  for name in names:
+    derived_dependencies[name] = ('dens', 'vely')
+  names = ('cons_hydro_nr_z', 'cons_mhd_nr_z')
+  for name in names:
+    derived_dependencies[name] = ('dens', 'velz')
 
   # Read data
   with open(kwargs['data_file'], 'rb') as f:
