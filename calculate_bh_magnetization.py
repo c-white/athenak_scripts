@@ -18,7 +18,7 @@ Options include:
 
 Run "calculate_bh_magnetization.py -h" to see a full description of inputs.
 
-The results will be printed to screen. The include volume- and mass-weighted
+The results will be printed to screen. They include volume- and mass-weighted
 averages of plasma sigma and beta^{-1} over the region of interest.
 
 The domain extends from the outer horizon to r <= r_max (default: infinity), and
@@ -173,15 +173,23 @@ def main(**kwargs):
 
       # Read cell data
       cell_data_start = f.tell()
+      skip_block = False
       for ind, name in zip(variable_inds_sorted, variable_names_sorted):
         f.seek(cell_data_start + ind * variable_data_size, 0)
         quantities[name] = np.array(struct.unpack(block_cell_format, f.read(variable_data_size))).reshape(block_nz, block_ny, block_nx)
+        if name == 'dens' and np.max(quantities[name]) < kwargs['rho_min']:
+          skip_block = True
+          continue
       f.seek((num_variables_base - ind - 1) * variable_data_size, 1)
+      if skip_block:
+        continue
 
       # Calculate radial coordinate
       rr2 = np.maximum(x[None,None,:] ** 2 + y[None,:,None] ** 2 + z[:,None,None] ** 2, 1.0)
       r2 = 0.5 * (rr2 - a2 + np.sqrt((rr2 - a2) ** 2 + 4.0 * a2 * z[:,None,None] ** 2))
       r = np.sqrt(r2)
+      if np.min(r) > kwargs['r_max']:
+        continue
 
       # Calculate volume and mass
       rho = quantities['dens']
