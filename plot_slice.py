@@ -50,7 +50,8 @@ Currently, these include the following:
     - pmag_rel: magnetic pressure, pmag = (B^2 - E^2) / 2 = b_mu b^mu / 2
     - beta_inv_rel: reciprocal of plasma beta, beta^{-1} = pmag / pgas
     - sigma_rel: cold plasma sigma, sigma = 2 pmag / rho
-    - sigmah_rel: hot plasma sigma, sigma_hot = 2 pmag / (rho + ugas + pgas + 2 * pmag)
+    - sigmah_rel: hot plasma sigma, sigma_hot = 2 pmag / (rho + ugas + pgas)
+    - va_rel: Alfven speed, v_A = (2 pmag / (rho + ugas + pgas + 2 * pmag))^(1/2)
   - Relativistic radiation quantities:
     - prad: (radiation pressure) = (fluid-frame radiation energy density) / 3
     - prad_pgas: (radiation pressure) / (gas pressure)
@@ -170,8 +171,8 @@ def main(**kwargs):
     derived_dependencies[name] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
   derived_dependencies['beta_inv_rel'] = ('eint', 'velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
   derived_dependencies['sigma_rel'] = ('dens', 'velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
-  names = ('sigmah_rel', 'wmhd', 'Bemhd', 'cons_mhd_nr_t', 'cons_mhd_rel_t', 'cons_mhd_rel_x', \
-      'cons_mhd_rel_y', 'cons_mhd_rel_z')
+  names = ('sigmah_rel', 'va_rel', 'wmhd', 'Bemhd', 'cons_mhd_nr_t', 'cons_mhd_rel_t', \
+      'cons_mhd_rel_x', 'cons_mhd_rel_y', 'cons_mhd_rel_z')
   for name in names:
     derived_dependencies[name] = ('dens', 'eint', 'velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
   derived_dependencies['prad'] = ('r00_ff',)
@@ -292,8 +293,9 @@ def main(**kwargs):
       raise RuntimeError('Unable to find number of ghost cells in input file.')
 
     # Extract adiabatic index from input file metadata
-    names = ('pgas', 'pgas_rho', 'T', 'prad_pgas', 'sigmah_rel', 'wgas', 'wgasrad', 'Begas', \
-        'Begasrad', 'cons_hydro_rel_t', 'cons_hydro_rel_x', 'cons_hydro_rel_y', 'cons_hydro_rel_z')
+    names = ('pgas', 'pgas_rho', 'T', 'prad_pgas', 'sigmah_rel', 'va_rel', 'wgas', 'wgasrad', \
+        'Begas', 'Begasrad', 'cons_hydro_rel_t', 'cons_hydro_rel_x', 'cons_hydro_rel_y', \
+        'cons_hydro_rel_z')
     if kwargs['variable'] in ['derived:' + name for name in names]:
       try:
         gamma_adi = float(input_data['hydro']['gamma'])
@@ -342,11 +344,11 @@ def main(**kwargs):
     names = ('uut', 'ut', 'ux', 'uy', 'uz', 'ur', 'uth', 'uph', 'u_t', 'u_x', 'u_y', 'u_z', 'u_r', \
         'u_th', 'u_ph', 'vx', 'vy', 'vz', 'vr_rel', 'vth_rel', 'vph_rel', 'bt', 'bx', 'by', 'bz', \
         'br', 'bth', 'bph', 'b_t', 'b_x', 'b_y', 'b_z', 'b_r', 'b_th', 'b_ph', 'Br_rel', \
-        'Bth_rel', 'Bph_rel', 'pmag_rel', 'beta_inv_rel', 'sigma_rel', 'sigmah_rel', 'pmag_prad', \
-        'wgas', 'wmhd', 'wgasrad', 'wmhdrad', 'Begas', 'Bemhd', 'Begasrad', 'Bemhdrad', \
-        'cons_hydro_rel_t', 'cons_hydro_rel_x', 'cons_hydro_rel_y', 'cons_hydro_rel_z', \
-        'cons_em_rel_t', 'cons_em_rel_x', 'cons_em_rel_y', 'cons_em_rel_z', 'cons_mhd_rel_t', \
-        'cons_mhd_rel_x', 'cons_mhd_rel_y', 'cons_mhd_rel_z')
+        'Bth_rel', 'Bph_rel', 'pmag_rel', 'beta_inv_rel', 'sigma_rel', 'sigmah_rel', 'va_rel', \
+        'pmag_prad', 'wgas', 'wmhd', 'wgasrad', 'wmhdrad', 'Begas', 'Bemhd', 'Begasrad', \
+        'Bemhdrad', 'cons_hydro_rel_t', 'cons_hydro_rel_x', 'cons_hydro_rel_y', \
+        'cons_hydro_rel_z', 'cons_em_rel_t', 'cons_em_rel_x', 'cons_em_rel_y', 'cons_em_rel_z', \
+        'cons_mhd_rel_t', 'cons_mhd_rel_x', 'cons_mhd_rel_y', 'cons_mhd_rel_z')
     if kwargs['variable'] in ['derived:' + name for name in names]:
       assert input_data['coord']['general_rel'] == 'true', \
           '"{0}" is only defined for GR data.'.format(variable_name)
@@ -358,11 +360,11 @@ def main(**kwargs):
     names = ('uut', 'ut', 'ux', 'uy', 'uz', 'ur', 'uth', 'uph', 'u_t', 'u_x', 'u_y', 'u_z', 'u_r', \
         'u_th', 'u_ph', 'vx', 'vy', 'vz', 'vr_rel', 'vth_rel', 'vph_rel', 'bt', 'bx', 'by', 'bz', \
         'br', 'bth', 'bph', 'b_t', 'b_x', 'b_y', 'b_z', 'b_r', 'b_th', 'b_ph', 'Br_rel', \
-        'Bth_rel', 'Bph_rel', 'pmag_rel', 'beta_inv_rel', 'sigma_rel', 'sigmah_rel', 'pmag_prad', \
-        'wmhd', 'wmhdrad', 'Begas', 'Bemhd', 'Begasrad', 'Bemhdrad', 'cons_hydro_rel_t', \
-        'cons_hydro_rel_x', 'cons_hydro_rel_y', 'cons_hydro_rel_z', 'cons_em_rel_t', \
-        'cons_em_rel_x', 'cons_em_rel_y', 'cons_em_rel_z', 'cons_mhd_rel_t', 'cons_mhd_rel_x', \
-        'cons_mhd_rel_y', 'cons_mhd_rel_z')
+        'Bth_rel', 'Bph_rel', 'pmag_rel', 'beta_inv_rel', 'sigma_rel', 'sigmah_rel', 'va_rel', \
+        'pmag_prad', 'wmhd', 'wmhdrad', 'Begas', 'Bemhd', 'Begasrad', 'Bemhdrad', \
+        'cons_hydro_rel_t', 'cons_hydro_rel_x', 'cons_hydro_rel_y', 'cons_hydro_rel_z', \
+        'cons_em_rel_t', 'cons_em_rel_x', 'cons_em_rel_y', 'cons_em_rel_z', 'cons_mhd_rel_t', \
+        'cons_mhd_rel_x', 'cons_mhd_rel_y', 'cons_mhd_rel_z')
     if kwargs['variable'] in ['derived:' + name for name in names]:
       try:
         bh_a = float(input_data['coord']['a'])
@@ -644,7 +646,7 @@ def main(**kwargs):
   # Calculate relativistic magnetic field or related quantity
   names = ('bt', 'bx', 'by', 'bz', 'br', 'bth', 'bph', 'b_t', 'b_x', 'b_y', 'b_z', 'b_r', 'b_th', \
       'b_ph', 'Br_rel', 'Bth_rel', 'Bph_rel', 'pmag_rel', 'beta_inv_rel', 'sigma_rel', \
-      'sigmah_rel', 'pmag_prad')
+      'sigmah_rel', 'va_rel', 'pmag_prad')
   if kwargs['variable'] in ['derived:' + name for name in names]:
     x, y, z = \
         xyz(num_blocks_used, block_nx1, block_nx2, extents, kwargs['dimension'], kwargs['location'])
@@ -713,7 +715,7 @@ def main(**kwargs):
         quantity = bth * ut - bt * uth
       else:
         quantity = bph * ut - bt * uph
-    names = ('pmag_rel', 'beta_inv_rel', 'sigma_rel', 'sigmah_rel', 'pmag_prad')
+    names = ('pmag_rel', 'beta_inv_rel', 'sigma_rel', 'sigmah_rel', 'va_rel', 'pmag_prad')
     if kwargs['variable'] in ['derived:' + name for name in names]:
       b_t, b_x, b_y, b_z = \
           lower_vector(bt, bx, by, bz, g_tt, g_tx, g_ty, g_tz, g_xx, g_xy, g_xz, g_yy, g_yz, g_zz)
@@ -726,8 +728,10 @@ def main(**kwargs):
       elif kwargs['variable'] == 'derived:sigma_rel':
         quantity = 2.0 * pmag / quantities['dens']
       elif kwargs['variable'] == 'derived:sigmah_rel':
-        w = quantities['dens'] + gamma_adi * quantities['eint'] + 2.0 * pmag
-        quantity = 2.0 * pmag / w
+        quantity = 2.0 * pmag / (quantities['dens'] + gamma_adi * quantities['eint'])
+      elif kwargs['variable'] == 'derived:va_rel':
+        va_sq = 2.0 * pmag / (quantities['dens'] + gamma_adi * quantities['eint'] + 2.0 * pmag)
+        quantity = np.sqrt(va_sq)
       else:
         prad = quantities['r00_ff'] / 3.0
         with warnings.catch_warnings():
