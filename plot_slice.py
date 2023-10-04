@@ -731,6 +731,8 @@ def main(**kwargs):
       else:
         prad = quantities['r00_ff'] / 3.0
         with warnings.catch_warnings():
+          warnings.filterwarnings('ignore', message='divide by zero encountered in divide', \
+              category=RuntimeWarning)
           warnings.filterwarnings('ignore', message='divide by zero encountered in true_divide', \
               category=RuntimeWarning)
           quantity = pmag / prad
@@ -1081,6 +1083,8 @@ def cks_geometry(a, x, y, z):
   r2 = 0.5 * (rr2 - a2 + np.sqrt((rr2 - a2) ** 2 + 4.0 * a2 * z2))
   r = np.sqrt(r2)
   with warnings.catch_warnings():
+    warnings.filterwarnings('ignore', message='invalid value encountered in divide', \
+        category=RuntimeWarning)
     warnings.filterwarnings('ignore', message='invalid value encountered in true_divide', \
         category=RuntimeWarning)
     f = 2.0 * r2 * r / (r2 ** 2 + a2 * z2)
