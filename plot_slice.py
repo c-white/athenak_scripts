@@ -1054,11 +1054,19 @@ def main(**kwargs):
 
   # Calculate color scaling
   if kwargs['vmin'] is None:
-    vmin = np.nanmin(quantity_masked)
+    if kwargs['norm'] == 'linear':
+      vmin = np.nanmin(np.where(quantity_masked > -np.inf, quantity_masked, np.nan))
+    elif kwargs['norm'] == 'log':
+      vmin = np.nanmin(np.where(quantity_masked > 0.0, quantity_masked, np.nan))
+    else:
+      vmin = np.nanmin(quantity_masked)
   else:
     vmin = kwargs['vmin']
   if kwargs['vmax'] is None:
-    vmax = np.nanmax(quantity_masked)
+    if kwargs['norm'] in ('linear', 'log'):
+      vmax = np.nanmax(np.where(quantity_masked < np.inf, quantity_masked, np.nan))
+    else:
+      vmax = np.nanmax(quantity_masked)
   else:
     vmax = kwargs['vmax']
   if kwargs['norm'] == 'linear':
@@ -1066,8 +1074,6 @@ def main(**kwargs):
     vmin = None
     vmax = None
   elif kwargs['norm'] == 'log':
-    if vmin == 0.0 and vmax > 0.0:
-      vmin = np.nanmin(np.where(quantity_masked > 0.0, quantity_masked, np.nan))
     norm = colors.LogNorm(vmin, vmax)
     vmin = None
     vmax = None
