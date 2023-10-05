@@ -68,6 +68,10 @@ Currently, these include the following:
     - R01_R00_ff, R02_R00_ff, R03_R00_ff: fluid-frame components of Eddington flux
     - R11_R00_ff, R22_R00_ff, R33_R00_ff: fluid-frame components of Eddington pressure
     - R12_R00_ff, R13_R00_ff, R23_R00_ff: fluid-frame components of Eddington shear
+  - Relativistic opacity quantities:
+    - kappa_a, kappa_s, kappa_t: absorption, scattering, and total opacities in cm^2/g
+    - alpha_a, alpha_s, alpha_t: corresponding absorption coefficients in cm^-1
+    - tau_a, tau_s, tau_t: corresponding optical depths per gravitational radius
   - Relativistic enthalpy densities and Bernoulli parameters:
     - wgas: hydrodynamic enthalpy rho + ugas + pgas
     - wmhd: magnetohydrodynamic enthalpy rho + ugas + pgas + 2 * pmag
@@ -158,8 +162,9 @@ def main(**kwargs):
   # Set physical units
   c_cgs = 2.99792458e10
   kb_cgs = 1.380649e-16
-  mp_cgs = 1.67262192369e-24
+  amu_cgs = 1.660538921e-24
   gg_msun_cgs = 1.32712440018e26
+  kappa_a_coefficient = 7.04536e25 + 1.95705e24
 
   # Set derived dependencies
   derived_dependencies = {}
@@ -219,6 +224,13 @@ def main(**kwargs):
   derived_dependencies['R12_R00_ff'] = ('r00_ff', 'r12_ff')
   derived_dependencies['R13_R00_ff'] = ('r00_ff', 'r13_ff')
   derived_dependencies['R23_R00_ff'] = ('r00_ff', 'r23_ff')
+  names = ('kappa_a', 'kappa_t', 'alpha_a', 'alpha_t', 'tau_a', 'tau_t')
+  for name in names:
+    derived_dependencies[name] = ('dens', 'eint')
+  derived_dependencies['kappa_s'] = ()
+  names = ('alpha_s', 'tau_s')
+  for name in names:
+    derived_dependencies[name] = ('dens',)
   derived_dependencies['wgas'] = ('dens', 'eint')
   derived_dependencies['wgasrad'] = ('dens', 'eint', 'r00_ff')
   names = ('wmhd', 'Bemhd', 'cons_mhd_nr_t', 'cons_mhd_rel_t', 'cons_mhd_rel_x', 'cons_mhd_rel_y', \
@@ -358,27 +370,70 @@ def main(**kwargs):
       except:
         raise RuntimeError('Unable to find adiabatic index in input file.')
 
-    # Extract units from input file metadata
+    # Extract molecular weight from input file metadata
     if kwargs['variable'] == 'derived:T':
+      try:
+        mu = float(input_data['units']['mu'])
+      except:
+        raise RuntimeError('Unable to find molecular weight in input file.')
+
+    # Extract opacity flags and values from input file metadata
+    names = ('kappa_a', 'kappa_t', 'alpha_a', 'alpha_t', 'tau_a', 'tau_t')
+    if kwargs['variable'] in ['derived:' + name for name in names]:
+      try:
+        power_opacity = bool(input_data['radiation']['power_opacity'])
+      except:
+        power_opacity = False
+      if not power_opacity:
+        try:
+          kappa_r_cgs = float(input_data['radiation']['kappa_a'])
+          kappa_pr_cgs = float(input_data['radiation']['kappa_p'])
+        except:
+          raise RuntimeError('Unable to find absorption opacities in input file.')
+    names = ('kappa_s', 'kappa_t', 'alpha_s', 'alpha_t', 'tau_s', 'tau_t')
+    if kwargs['variable'] in ['derived:' + name for name in names]:
+      try:
+        kappa_s_cgs = float(input_data['radiation']['kappa_s'])
+      except:
+        raise RuntimeError('Unable to find scattering opacity in input file.')
+
+    # Extract length unit from input file metadata
+    names = ('T', 'tau_a', 'tau_s', 'tau_t')
+    names_alt = ('kappa_a', 'kappa_t', 'alpha_a', 'alpha_t')
+    if kwargs['variable'] in ['derived:' + name for name in names] \
+        or (kwargs['variable'] in ['derived:' + name for name in names_alt] and power_opacity):
       if input_data['coord']['general_rel'] == 'true':
         try:
           length_cgs = float(input_data['units']['bhmass_msun']) * gg_msun_cgs / c_cgs ** 2
         except:
           raise RuntimeError('Unable to find black hole mass in input file.')
-        time_cgs = length_cgs / c_cgs
       else:
         try:
           length_cgs = float(input_data['units']['length_cgs'])
         except:
           raise RuntimeError('Unable to find length unit in input file.')
+
+    # Extract time unit from input file metadata
+    names = ('kappa_a', 'kappa_t', 'alpha_a', 'alpha_t', 'tau_a', 'tau_t')
+    if kwargs['variable'] == 'derived:T' \
+        or (kwargs['variable'] in ['derived:' + name for name in names] and power_opacity):
+      if input_data['coord']['general_rel'] == 'true':
+        time_cgs = length_cgs / c_cgs
+      else:
         try:
           time_cgs = float(input_data['units']['time_cgs'])
         except:
           raise RuntimeError('Unable to find time unit in input file.')
+
+    # Extract density unit from input file metadata
+    names = ('alpha_a', 'alpha_s', 'alpha_t', 'tau_a', 'tau_s', 'tau_t')
+    names_alt = ('kappa_a', 'kappa_t')
+    if kwargs['variable'] in ['derived:' + name for name in names] \
+        or (kwargs['variable'] in ['derived:' + name for name in names_alt] and power_opacity):
       try:
-        mu = float(input_data['units']['mu'])
+        density_cgs = float(input_data['units']['density_cgs'])
       except:
-        raise RuntimeError('Unable to find molecular weight in input file.')
+        raise RuntimeError('Unable to find density unit in input file.')
 
     # Check input file metadata for relativity
     names = ('vr_nr', 'vth_nr', 'vph_nr', 'Br_nr', 'Bth_nr', 'Bph_nr', 'pmag_nr', 'beta_inv_nr', \
@@ -535,26 +590,29 @@ def main(**kwargs):
 
       # Read cell data
       cell_data_start = f.tell()
-      for ind, name in zip(variable_inds_sorted, variable_names_sorted):
-        if ind == -1:
-          if kwargs['dimension'] == 'x':
-            quantities[name].append(np.full((block_nz, block_ny), block_level))
-          if kwargs['dimension'] == 'y':
-            quantities[name].append(np.full((block_nz, block_nx), block_level))
-          if kwargs['dimension'] == 'z':
-            quantities[name].append(np.full((block_ny, block_nx), block_level))
-        else:
-          f.seek(cell_data_start + ind * variable_data_size, 0)
-          cell_data = np.array(struct.unpack(block_cell_format, \
-              f.read(variable_data_size))).reshape(block_nz, block_ny, block_nx)
-          block_ind = block_ind_for_level[block_level]
-          if kwargs['dimension'] == 'x':
-            quantities[name].append(cell_data[:,:,block_ind])
-          if kwargs['dimension'] == 'y':
-            quantities[name].append(cell_data[:,block_ind,:])
-          if kwargs['dimension'] == 'z':
-            quantities[name].append(cell_data[block_ind,:,:])
-      f.seek((num_variables_base - ind - 1) * variable_data_size, 1)
+      if len(variable_inds_sorted) > 0:
+        for ind, name in zip(variable_inds_sorted, variable_names_sorted):
+          if ind == -1:
+            if kwargs['dimension'] == 'x':
+              quantities[name].append(np.full((block_nz, block_ny), block_level))
+            if kwargs['dimension'] == 'y':
+              quantities[name].append(np.full((block_nz, block_nx), block_level))
+            if kwargs['dimension'] == 'z':
+              quantities[name].append(np.full((block_ny, block_nx), block_level))
+          else:
+            f.seek(cell_data_start + ind * variable_data_size, 0)
+            cell_data = np.array(struct.unpack(block_cell_format, \
+                f.read(variable_data_size))).reshape(block_nz, block_ny, block_nx)
+            block_ind = block_ind_for_level[block_level]
+            if kwargs['dimension'] == 'x':
+              quantities[name].append(cell_data[:,:,block_ind])
+            if kwargs['dimension'] == 'y':
+              quantities[name].append(cell_data[:,block_ind,:])
+            if kwargs['dimension'] == 'z':
+              quantities[name].append(cell_data[block_ind,:,:])
+        f.seek((num_variables_base - ind - 1) * variable_data_size, 1)
+      else:
+        f.seek(num_variables_base * variable_data_size, 1)
 
   # Prepare to calculate derived quantity
   for name in variable_names_sorted:
@@ -569,7 +627,7 @@ def main(**kwargs):
     elif kwargs['variable'] == 'derived:pgas_rho':
       quantity = pgas / quantities['dens']
     elif kwargs['variable'] == 'derived:T':
-      quantity = mu * mp_cgs / kb_cgs * (length_cgs / time_cgs) ** 2 * pgas / quantities['dens']
+      quantity = mu * amu_cgs / kb_cgs * (length_cgs / time_cgs) ** 2 * pgas / quantities['dens']
     else:
       prad = quantities['r00_ff'] / 3.0
       quantity = prad / pgas
@@ -890,6 +948,38 @@ def main(**kwargs):
         quantity = quantities['r13_ff'] / quantities['r00_ff']
       if kwargs['variable'] == 'derived:R23_R00_ff':
         quantity = quantities['r23_ff'] / quantities['r00_ff']
+
+  # Calculate relativistic opacity quantity:
+  names = \
+      ('kappa_a', 'kappa_s', 'kappa_t', 'alpha_a', 'alpha_s', 'alpha_t', 'tau_a', 'tau_s', 'tau_t')
+  if kwargs['variable'] in ['derived:' + name for name in names]:
+    print('\nWarning: Opacity inferred based on particular version of AthenaK.\n')
+    names = ('kappa_a', 'kappa_t', 'alpha_a', 'alpha_t', 'tau_a', 'tau_t')
+    if kwargs['variable'] in ['derived:' + name for name in names] and power_opacity:
+      rho_cgs = quantities['dens'] * density_cgs
+      tt_scaled = quantities['eint'] * length_cgs ** 2 * amu_cgs \
+          / (quantities['dens'] * time_cgs ** 2 * kb_cgs)
+      kappa_a_cgs = kappa_a_coefficient * rho_cgs / tt_scaled ** 3.5
+    if kwargs['variable'] in ['derived:' + name for name in names] and not power_opacity:
+      kappa_a_cgs = kappa_pr_cgs + kappa_r_cgs
+    if kwargs['variable'] == 'derived:kappa_a':
+      quantity = kappa_a_cgs
+    if kwargs['variable'] == 'derived:kappa_s':
+      quantity = kappa_s_cgs * np.ones((num_blocks_used, 1, 1))
+    if kwargs['variable'] == 'derived:kappa_t':
+      quantity = kappa_a_cgs + kappa_s_cgs
+    if kwargs['variable'] == 'derived:alpha_a':
+      quantity = kappa_a_cgs * quantities['dens'] * density_cgs
+    if kwargs['variable'] == 'derived:alpha_s':
+      quantity = kappa_s_cgs * quantities['dens'] * density_cgs
+    if kwargs['variable'] == 'derived:alpha_t':
+      quantity = (kappa_a_cgs + kappa_s_cgs) * quantities['dens'] * density_cgs
+    if kwargs['variable'] == 'derived:tau_a':
+      quantity = kappa_a_cgs * quantities['dens'] * density_cgs * length_cgs
+    if kwargs['variable'] == 'derived:tau_s':
+      quantity = kappa_s_cgs * quantities['dens'] * density_cgs * length_cgs
+    if kwargs['variable'] == 'derived:tau_t':
+      quantity = (kappa_a_cgs + kappa_s_cgs) * quantities['dens'] * density_cgs * length_cgs
 
   # Calculate relativistic enthalpy density or Bernoulli parameter
   names = ('wgas', 'wmhd', 'wgasrad', 'wmhdrad', 'Begas', 'Bemhd', 'Begasrad', 'Bemhdrad')
