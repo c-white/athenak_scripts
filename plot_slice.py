@@ -106,11 +106,13 @@ Optional inputs include:
   -c: colormap recognized by Matplotlib
   -n: colormap normalization (e.g., "-n log") if not linear
   --vmin, --vmax: limits of colorbar if not the full range of data
-  --notex: flag to disable Latex typesetting of labels
+  --grid: flag for outlining domain decomposition
   --horizon: flag for outlining outer event horizon of GR simulation
   --horizon_mask: flag for covering black hole of GR simulation
   --ergosphere: flag for outlining boundary of ergosphere in GR simulation
   --horizon_color, --horizon_mask_color, --ergosphere_color: color choices
+  --notex: flag to disable Latex typesetting of labels
+  --dpi: image resolution
 
 Run "plot_slice.py -h" to see a full description of inputs.
 """
@@ -143,6 +145,8 @@ def main(**kwargs):
   import matplotlib.pyplot as plt
 
   # Plotting parameters
+  grid_line_style = '-'
+  grid_line_width = 0.5
   horizon_line_style = '-'
   horizon_line_width = 1.0
   ergosphere_num_points = 129
@@ -1098,6 +1102,18 @@ def main(**kwargs):
   # Make colorbar
   plt.colorbar(label=label)
 
+  # Mark grid
+  if kwargs['grid']:
+    for block_num in range(num_blocks_used):
+      x0 = extents[block_num][0]
+      y0 = extents[block_num][2]
+      width = extents[block_num][1] - extents[block_num][0]
+      height = extents[block_num][3] - extents[block_num][2]
+      box = patches.Rectangle((x0, y0), width, height, linestyle=grid_line_style, \
+          linewidth=grid_line_width, facecolor='none', edgecolor=kwargs['grid_color'], \
+          alpha=kwargs['grid_alpha'])
+      plt.gca().add_artist(box)
+
   # Mark and/or mask horizon
   if kwargs['horizon'] or kwargs['horizon_mask']:
     r_hor = 1.0 + (1.0 - bh_a ** 2) ** 0.5
@@ -1666,8 +1682,10 @@ if __name__ == '__main__':
   parser.add_argument('-n', '--norm', help='name of Matplotlib norm to use')
   parser.add_argument('--vmin', type=float, help='colormap minimum')
   parser.add_argument('--vmax', type=float, help='colormap maximum')
-  parser.add_argument('--notex', action='store_true', \
-      help='flag indicating LaTeX integration is not to be used')
+  parser.add_argument('--grid', action='store_true', \
+      help='flag indicating domain decomposition should be overlaid')
+  parser.add_argument('--grid_color', default='gray', help='color string for grid overlay')
+  parser.add_argument('--grid_alpha', type=float, default=0.5, help='opacity of grid overlay')
   parser.add_argument('--horizon', action='store_true', \
       help='flag indicating black hole event horizon should be marked')
   parser.add_argument('--horizon_color', default='k', help='color string for event horizon marker')
@@ -1679,6 +1697,9 @@ if __name__ == '__main__':
       help='flag indicating black hole ergosphere should be marked')
   parser.add_argument('--ergosphere_color', default='gray', \
       help='color string for ergosphere marker')
-  parser.add_argument('--dpi', type=float, default=300, help='resolution of output figure')
+  parser.add_argument('--notex', action='store_true', \
+      help='flag indicating Latex integration is not to be used')
+  parser.add_argument('--dpi', type=float, default=300, \
+      help='resolution of output figure (default: 300)')
   args = parser.parse_args()
   main(**vars(args))
