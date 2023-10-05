@@ -26,6 +26,7 @@ Currently, these include the following:
     - pgas: gas pressure
     - pgas_rho: pgas / rho
     - T: temperature in K
+    - prad_pgas: (fluid-frame radiation pressure) / (gas pressure)
   - Non-relativistic velocity:
     - vr_nr, vth_nr, vph_nr: orthonormal spherical components v^i
   - Relativistic velocity:
@@ -47,15 +48,26 @@ Currently, these include the following:
     - b_t, b_x, b_y, b_z: covariant CKS 4-field components b_mu
     - b_r, b_th, b_ph: covariant SKS 4-field components b_i
     - Br_rel, Bth_rel, Bph_rel: SKS 3-field components B^i = *F^{it}
-    - pmag_rel: magnetic pressure, pmag = (B^2 - E^2) / 2 = b_mu b^mu / 2
+    - pmag_rel: fluid-frame magnetic pressure, pmag = (B^2 - E^2) / 2 = b_mu b^mu / 2
     - beta_inv_rel: reciprocal of plasma beta, beta^{-1} = pmag / pgas
     - sigma_rel: cold plasma sigma, sigma = 2 pmag / rho
     - sigmah_rel: hot plasma sigma, sigma_hot = 2 pmag / (rho + ugas + pgas)
     - va_rel: Alfven speed, v_A = (2 pmag / (rho + ugas + pgas + 2 * pmag))^(1/2)
+    - pmag_prad: (fluid-frame magnetic pressure) / (fluid-frame radiation pressure)
   - Relativistic radiation quantities:
-    - prad: (radiation pressure) = (fluid-frame radiation energy density) / 3
-    - prad_pgas: (radiation pressure) / (gas pressure)
-    - pmag_prad: (magnetic pressure) / (radiation pressure)
+    - prad: (fluid-frame radiation pressure) = (fluid-frame radiation energy density) / 3
+    - Rtr, Rtth, Rtph: contravariant SKS components of radiation flux
+    - Rrr, Rthth, Rphph: contravariant SKS components of radiation pressure
+    - Rrth, Rrph, Rthph: contravariant SKS components of radiation shear
+    - Rtx_Rtt, Rty_Rtt, Rtz_Rtt: contravariant CKS components of Eddington flux
+    - Rxx_Rtt, Ryy_Rtt, Rzz_Rtt: contravariant CKS components of Eddington pressure
+    - Rxy_Rtt, Rxz_Rtt, Ryz_Rtt: contravariant CKS components of Eddington shear
+    - Rtr_Rtt, Rtth_Rtt, Rtph_Rtt: contravariant SKS components of Eddington flux
+    - Rrr_Rtt, Rthth_Rtt, Rphph_Rtt: contravariant SKS components of Eddington pressure
+    - Rrth_Rtt, Rrph_Rtt, Rthph_Rtt: contravariant SKS components of Eddington shear
+    - R01_R00_ff, R02_R00_ff, R03_R00_ff: fluid-frame components of Eddington flux
+    - R11_R00_ff, R22_R00_ff, R33_R00_ff: fluid-frame components of Eddington pressure
+    - R12_R00_ff, R13_R00_ff, R23_R00_ff: fluid-frame components of Eddington shear
   - Relativistic enthalpy densities and Bernoulli parameters:
     - wgas: hydrodynamic enthalpy rho + ugas + pgas
     - wmhd: magnetohydrodynamic enthalpy rho + ugas + pgas + 2 * pmag
@@ -152,9 +164,10 @@ def main(**kwargs):
   # Set derived dependencies
   derived_dependencies = {}
   derived_dependencies['pgas'] = ('eint',)
-  names = ('pgas_rho', 'T', 'wgas')
+  names = ('pgas_rho', 'T')
   for name in names:
     derived_dependencies[name] = ('dens', 'eint')
+  derived_dependencies['prad_pgas'] = ('eint', 'r00_ff')
   names = ('vr_nr', 'vth_nr', 'vph_nr', 'uut', 'ut', 'ux', 'uy', 'uz', 'ur', 'uth', 'uph', 'u_t', \
       'u_x', 'u_y', 'u_z', 'u_r', 'u_th', 'u_ph', 'vx', 'vy', 'vz', 'vr_rel', 'vth_rel', 'vph_rel')
   for name in names:
@@ -171,14 +184,47 @@ def main(**kwargs):
     derived_dependencies[name] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
   derived_dependencies['beta_inv_rel'] = ('eint', 'velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
   derived_dependencies['sigma_rel'] = ('dens', 'velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
-  names = ('sigmah_rel', 'va_rel', 'wmhd', 'Bemhd', 'cons_mhd_nr_t', 'cons_mhd_rel_t', \
-      'cons_mhd_rel_x', 'cons_mhd_rel_y', 'cons_mhd_rel_z')
+  names = ('sigmah_rel', 'va_rel')
   for name in names:
     derived_dependencies[name] = ('dens', 'eint', 'velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['prad'] = ('r00_ff',)
-  derived_dependencies['prad_pgas'] = ('eint', 'r00_ff')
   derived_dependencies['pmag_prad'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3', 'r00_ff')
+  derived_dependencies['prad'] = ('r00_ff',)
+  names = ('Rtr', 'Rtth', 'Rtph')
+  for name in names:
+    derived_dependencies[name] = ('r01', 'r02', 'r03')
+  names = ('Rrr', 'Rthth', 'Rphph', 'Rrth', 'Rrph', 'Rthph')
+  for name in names:
+    derived_dependencies[name] = ('r11', 'r12', 'r13', 'r22', 'r23', 'r33')
+  derived_dependencies['Rtx_Rtt'] = ('r00', 'r01')
+  derived_dependencies['Rty_Rtt'] = ('r00', 'r02')
+  derived_dependencies['Rtz_Rtt'] = ('r00', 'r03')
+  derived_dependencies['Rxx_Rtt'] = ('r00', 'r11')
+  derived_dependencies['Ryy_Rtt'] = ('r00', 'r22')
+  derived_dependencies['Rzz_Rtt'] = ('r00', 'r33')
+  derived_dependencies['Rxy_Rtt'] = ('r00', 'r12')
+  derived_dependencies['Rxz_Rtt'] = ('r00', 'r13')
+  derived_dependencies['Ryz_Rtt'] = ('r00', 'r23')
+  names = ('Rtr_Rtt', 'Rtth_Rtt', 'Rtph_Rtt')
+  for name in names:
+    derived_dependencies[name] = ('r00', 'r01', 'r02', 'r03')
+  names = ('Rrr_Rtt', 'Rthth_Rtt', 'Rphph_Rtt', 'Rrth_Rtt', 'Rrph_Rtt', 'Rthph_Rtt')
+  for name in names:
+    derived_dependencies[name] = ('r00', 'r11', 'r12', 'r13', 'r22', 'r23', 'r33')
+  derived_dependencies['R01_R00_ff'] = ('r00_ff', 'r01_ff')
+  derived_dependencies['R02_R00_ff'] = ('r00_ff', 'r02_ff')
+  derived_dependencies['R03_R00_ff'] = ('r00_ff', 'r03_ff')
+  derived_dependencies['R11_R00_ff'] = ('r00_ff', 'r11_ff')
+  derived_dependencies['R22_R00_ff'] = ('r00_ff', 'r22_ff')
+  derived_dependencies['R33_R00_ff'] = ('r00_ff', 'r33_ff')
+  derived_dependencies['R12_R00_ff'] = ('r00_ff', 'r12_ff')
+  derived_dependencies['R13_R00_ff'] = ('r00_ff', 'r13_ff')
+  derived_dependencies['R23_R00_ff'] = ('r00_ff', 'r23_ff')
+  derived_dependencies['wgas'] = ('dens', 'eint')
   derived_dependencies['wgasrad'] = ('dens', 'eint', 'r00_ff')
+  names = ('wmhd', 'Bemhd', 'cons_mhd_nr_t', 'cons_mhd_rel_t', 'cons_mhd_rel_x', 'cons_mhd_rel_y', \
+      'cons_mhd_rel_z')
+  for name in names:
+    derived_dependencies[name] = ('dens', 'eint', 'velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
   names = ('wmhdrad', 'Bemhdrad')
   for name in names:
     derived_dependencies[name] = \
@@ -361,7 +407,9 @@ def main(**kwargs):
         'u_th', 'u_ph', 'vx', 'vy', 'vz', 'vr_rel', 'vth_rel', 'vph_rel', 'bt', 'bx', 'by', 'bz', \
         'br', 'bth', 'bph', 'b_t', 'b_x', 'b_y', 'b_z', 'b_r', 'b_th', 'b_ph', 'Br_rel', \
         'Bth_rel', 'Bph_rel', 'pmag_rel', 'beta_inv_rel', 'sigma_rel', 'sigmah_rel', 'va_rel', \
-        'pmag_prad', 'wmhd', 'wmhdrad', 'Begas', 'Bemhd', 'Begasrad', 'Bemhdrad', \
+        'pmag_prad', 'Rtr', 'Rtth', 'Rtph', 'Rrr', 'Rthth', 'Rphph', 'Rrth', 'Rrph', 'Rthph', \
+        'Rtr_Rtt', 'Rtth_Rtt', 'Rtph_Rtt', 'Rrr_Rtt', 'Rthth_Rtt', 'Rphph_Rtt', 'Rrth_Rtt', \
+        'Rrph_Rtt', 'Rthph_Rtt', 'wmhd', 'wmhdrad', 'Begas', 'Bemhd', 'Begasrad', 'Bemhdrad', \
         'cons_hydro_rel_t', 'cons_hydro_rel_x', 'cons_hydro_rel_y', 'cons_hydro_rel_z', \
         'cons_em_rel_t', 'cons_em_rel_x', 'cons_em_rel_y', 'cons_em_rel_z', 'cons_mhd_rel_t', \
         'cons_mhd_rel_x', 'cons_mhd_rel_y', 'cons_mhd_rel_z')
@@ -576,7 +624,7 @@ def main(**kwargs):
     names = ('ur', 'uth', 'uph', 'vr_rel', 'vth_rel', 'vph_rel')
     if kwargs['variable'] in ['derived:' + name for name in names]:
       ut, ux, uy, uz = norm_to_coord(uut, uux, uuy, uuz, alpha, betax, betay, betaz)
-      ur, uth, uph = cks_to_sks_con(ux, uy, uz, bh_a, x, y, z)
+      ur, uth, uph = cks_to_sks_vec_con(ux, uy, uz, bh_a, x, y, z)
       if kwargs['variable'] == 'derived:ur':
         quantity = ur
       elif kwargs['variable'] == 'derived:uth':
@@ -607,7 +655,7 @@ def main(**kwargs):
       ut, ux, uy, uz = norm_to_coord(uut, uux, uuy, uuz, alpha, betax, betay, betaz)
       u_t, u_x, u_y, u_z = \
           lower_vector(ut, ux, uy, uz, g_tt, g_tx, g_ty, g_tz, g_xx, g_xy, g_xz, g_yy, g_yz, g_zz)
-      u_r, u_th, u_ph = cks_to_sks_cov(u_x, u_y, u_z, bh_a, x, y, z)
+      u_r, u_th, u_ph = cks_to_sks_vec_cov(u_x, u_y, u_z, bh_a, x, y, z)
       if kwargs['variable'] == 'derived:u_r':
         quantity = u_r
       elif kwargs['variable'] == 'derived:u_th':
@@ -675,7 +723,7 @@ def main(**kwargs):
         quantity = bz
     names = ('br', 'bth', 'bph')
     if kwargs['variable'] in ['derived:' + name for name in names]:
-      br, bth, bph = cks_to_sks_con(bx, by, bz, bh_a, x, y, z)
+      br, bth, bph = cks_to_sks_vec_con(bx, by, bz, bh_a, x, y, z)
       if kwargs['variable'] == 'derived:br':
         quantity = br
       elif kwargs['variable'] == 'derived:bth':
@@ -698,7 +746,7 @@ def main(**kwargs):
     if kwargs['variable'] in ['derived:' + name for name in names]:
       b_t, b_x, b_y, b_z = \
           lower_vector(bt, bx, by, bz, g_tt, g_tx, g_ty, g_tz, g_xx, g_xy, g_xz, g_yy, g_yz, g_zz)
-      b_r, b_th, b_ph = cks_to_sks_cov(b_x, b_y, b_z, bh_a, x, y, z)
+      b_r, b_th, b_ph = cks_to_sks_vec_cov(b_x, b_y, b_z, bh_a, x, y, z)
       if kwargs['variable'] == 'derived:b_r':
         quantity = b_r
       elif kwargs['variable'] == 'derived:b_th':
@@ -707,8 +755,8 @@ def main(**kwargs):
         quantity = b_ph
     names = ('Br_rel', 'Bth_rel', 'Bph_rel')
     if kwargs['variable'] in ['derived:' + name for name in names]:
-      ur, uth, uph = cks_to_sks_con(ux, uy, uz, bh_a, x, y, z)
-      br, bth, bph = cks_to_sks_con(bx, by, bz, bh_a, x, y, z)
+      ur, uth, uph = cks_to_sks_vec_con(ux, uy, uz, bh_a, x, y, z)
+      br, bth, bph = cks_to_sks_vec_con(bx, by, bz, bh_a, x, y, z)
       if kwargs['variable'] == 'derived:Br_rel':
         quantity = br * ut - bt * ur
       elif kwargs['variable'] == 'derived:Bth_rel':
@@ -742,8 +790,106 @@ def main(**kwargs):
           quantity = pmag / prad
 
   # Calculate relativistic radiation quantity
-  if kwargs['variable'] == 'derived:prad':
-    quantity = quantities['r00_ff'] / 3.0
+  names = ('prad', 'Rtr', 'Rtth', 'Rtph', 'Rrr', 'Rthth', 'Rphph', 'Rrth', 'Rrph', 'Rthph', \
+      'Rtx_Rtt', 'Rty_Rtt', 'Rtz_Rtt', 'Rxx_Rtt', 'Ryy_Rtt', 'Rzz_Rtt', 'Rxy_Rtt', 'Rxz_Rtt', \
+      'Ryz_Rtt', 'Rtr_Rtt', 'Rtth_Rtt', 'Rtph_Rtt', 'Rrr_Rtt', 'Rthth_Rtt', 'Rphph_Rtt', \
+      'Rrth_Rtt', 'Rrph_Rtt', 'Rthph_Rtt', 'R01_R00_ff', 'R02_R00_ff', 'R03_R00_ff', 'R11_R00_ff', \
+      'R22_R00_ff', 'R33_R00_ff', 'R12_R00_ff', 'R13_R00_ff', 'R23_R00_ff')
+  if kwargs['variable'] in ['derived:' + name for name in names]:
+    if kwargs['variable'] == 'derived:prad':
+      quantity = quantities['r00_ff'] / 3.0
+    with warnings.catch_warnings():
+      warnings.filterwarnings('ignore', message='invalid value encountered in divide', \
+          category=RuntimeWarning)
+      warnings.filterwarnings('ignore', message='invalid value encountered in true_divide', \
+          category=RuntimeWarning)
+      names = ('Rtr', 'Rtth', 'Rtph', 'Rtr_Rtt', 'Rtth_Rtt', 'Rtph_Rtt')
+      if kwargs['variable'] in ['derived:' + name for name in names]:
+        x, y, z = xyz(num_blocks_used, block_nx1, block_nx2, extents, kwargs['dimension'], \
+            kwargs['location'])
+        rrtr, rrtth, rrtph = cks_to_sks_vec_con(quantities['r01'], quantities['r02'], \
+            quantities['r03'], bh_a, x, y, z)
+        if kwargs['variable'] == 'derived:Rtr':
+          quantity = rrtr
+        if kwargs['variable'] == 'derived:Rtth':
+          quantity = rrtth
+        if kwargs['variable'] == 'derived:Rtph':
+          quantity = rrtph
+        if kwargs['variable'] == 'derived:Rtr_Rtt':
+          quantity = rrtr / quantities['r00']
+        if kwargs['variable'] == 'derived:Rtth_Rtt':
+          quantity = rrtth / quantities['r00']
+        if kwargs['variable'] == 'derived:Rtph_Rtt':
+          quantity = rrtph / quantities['r00']
+      names = ('Rrr', 'Rthth', 'Rphph', 'Rrth', 'Rrph', 'Rthph', 'Rrr_Rtt', 'Rthth_Rtt', \
+          'Rphph_Rtt', 'Rrth_Rtt', 'Rrph_Rtt', 'Rthph_Rtt')
+      if kwargs['variable'] in ['derived:' + name for name in names]:
+        x, y, z = xyz(num_blocks_used, block_nx1, block_nx2, extents, kwargs['dimension'], \
+            kwargs['location'])
+        rrrr, rrrth, rrrph, _, rrthth, rrthph, _, _, rrphph = cks_to_sks_tens_con(\
+            quantities['r11'], quantities['r12'], quantities['r13'], quantities['r12'], \
+            quantities['r22'], quantities['r23'], quantities['r13'], quantities['r23'], \
+            quantities['r33'], bh_a, x, y, z)
+        if kwargs['variable'] == 'derived:Rrr':
+          quantity = rrrr
+        if kwargs['variable'] == 'derived:Rthth':
+          quantity = rrthth
+        if kwargs['variable'] == 'derived:Rphph':
+          quantity = rrphph
+        if kwargs['variable'] == 'derived:Rrth':
+          quantity = rrrth
+        if kwargs['variable'] == 'derived:Rrph':
+          quantity = rrrph
+        if kwargs['variable'] == 'derived:Rthph':
+          quantity = rrthph
+        if kwargs['variable'] == 'derived:Rrr_Rtt':
+          quantity = rrrr / quantities['r00']
+        if kwargs['variable'] == 'derived:Rthth_Rtt':
+          quantity = rrthth / quantities['r00']
+        if kwargs['variable'] == 'derived:Rphph_Rtt':
+          quantity = rrphph / quantities['r00']
+        if kwargs['variable'] == 'derived:Rrth_Rtt':
+          quantity = rrrth / quantities['r00']
+        if kwargs['variable'] == 'derived:Rrph_Rtt':
+          quantity = rrrph / quantities['r00']
+        if kwargs['variable'] == 'derived:Rthph_Rtt':
+          quantity = rrthph / quantities['r00']
+      if kwargs['variable'] == 'derived:Rtx_Rtt':
+        quantity = quantities['r01'] / quantities['r00']
+      if kwargs['variable'] == 'derived:Rty_Rtt':
+        quantity = quantities['r02'] / quantities['r00']
+      if kwargs['variable'] == 'derived:Rtz_Rtt':
+        quantity = quantities['r03'] / quantities['r00']
+      if kwargs['variable'] == 'derived:Rxx_Rtt':
+        quantity = quantities['r11'] / quantities['r00']
+      if kwargs['variable'] == 'derived:Ryy_Rtt':
+        quantity = quantities['r22'] / quantities['r00']
+      if kwargs['variable'] == 'derived:Rzz_Rtt':
+        quantity = quantities['r33'] / quantities['r00']
+      if kwargs['variable'] == 'derived:Rxy_Rtt':
+        quantity = quantities['r12'] / quantities['r00']
+      if kwargs['variable'] == 'derived:Rxz_Rtt':
+        quantity = quantities['r13'] / quantities['r00']
+      if kwargs['variable'] == 'derived:Ryz_Rtt':
+        quantity = quantities['r23'] / quantities['r00']
+      if kwargs['variable'] == 'derived:R01_R00_ff':
+        quantity = quantities['r01_ff'] / quantities['r00_ff']
+      if kwargs['variable'] == 'derived:R02_R00_ff':
+        quantity = quantities['r02_ff'] / quantities['r00_ff']
+      if kwargs['variable'] == 'derived:R03_R00_ff':
+        quantity = quantities['r03_ff'] / quantities['r00_ff']
+      if kwargs['variable'] == 'derived:R11_R00_ff':
+        quantity = quantities['r11_ff'] / quantities['r00_ff']
+      if kwargs['variable'] == 'derived:R22_R00_ff':
+        quantity = quantities['r22_ff'] / quantities['r00_ff']
+      if kwargs['variable'] == 'derived:R33_R00_ff':
+        quantity = quantities['r33_ff'] / quantities['r00_ff']
+      if kwargs['variable'] == 'derived:R12_R00_ff':
+        quantity = quantities['r12_ff'] / quantities['r00_ff']
+      if kwargs['variable'] == 'derived:R13_R00_ff':
+        quantity = quantities['r13_ff'] / quantities['r00_ff']
+      if kwargs['variable'] == 'derived:R23_R00_ff':
+        quantity = quantities['r23_ff'] / quantities['r00_ff']
 
   # Calculate relativistic enthalpy density or Bernoulli parameter
   names = ('wgas', 'wmhd', 'wgasrad', 'wmhdrad', 'Begas', 'Bemhd', 'Begasrad', 'Bemhdrad')
@@ -1127,8 +1273,8 @@ def norm_to_coord(uut, uux, uuy, uuz, alpha, betax, betay, betaz):
   uz = uuz - betaz * ut
   return ut, ux, uy, uz
 
-# Function for converting contravariant CKS components to SKS
-def cks_to_sks_con(ax, ay, az, a, x, y, z):
+# Function for converting contravariant vector CKS components to SKS
+def cks_to_sks_vec_con(ax, ay, az, a, x, y, z):
   a2 = a ** 2
   x2 = x ** 2
   y2 = y ** 2
@@ -1158,8 +1304,8 @@ def lower_vector(at, ax, ay, az, g_tt, g_tx, g_ty, g_tz, g_xx, g_xy, g_xz, g_yy,
   a_z = g_tz * at + g_xz * ax + g_yz * ay + g_zz * az
   return a_t, a_x, a_y, a_z
 
-# Function for converting covariant CKS components to SKS
-def cks_to_sks_cov(a_x, a_y, a_z, a, x, y, z):
+# Function for converting covariant covector CKS components to SKS
+def cks_to_sks_vec_cov(a_x, a_y, a_z, a, x, y, z):
   a2 = a ** 2
   z2 = z ** 2
   rr2 = x ** 2 + y ** 2 + z2
@@ -1192,6 +1338,16 @@ def three_field_to_four_field(bbx, bby, bbz, ut, ux, uy, uz, u_x, u_y, u_z):
   by = (bby + bt * uy) / ut
   bz = (bbz + bt * uz) / ut
   return bt, bx, by, bz
+
+# Function for converting contravariant rank-2 tensor CKS components to SKS
+def cks_to_sks_tens_con(axx, axy, axz, ayx, ayy, ayz, azx, azy, azz, a, x, y, z):
+  axr, axth, axph = cks_to_sks_vec_con(axx, axy, axz, a, x, y, z)
+  ayr, ayth, ayph = cks_to_sks_vec_con(ayx, ayy, ayz, a, x, y, z)
+  azr, azth, azph = cks_to_sks_vec_con(azx, azy, azz, a, x, y, z)
+  arr, athr, aphr = cks_to_sks_vec_con(axr, ayr, azr, a, x, y, z)
+  arth, athth, aphth = cks_to_sks_vec_con(axth, ayth, azth, a, x, y, z)
+  arph, athph, aphph = cks_to_sks_vec_con(axph, ayph, azph, a, x, y, z)
+  return arr, arth, arph, athr, athth, athph, aphr, aphth, aphph
 
 # Parse inputs and execute main function
 if __name__ == '__main__':
