@@ -95,7 +95,8 @@ Currently, these include the following:
     - cons_mhd_rel_t, : (T_MHD)^t_t
     - cons_mhd_rel_x, cons_mhd_rel_y, cons_mhd_rel_z: (T_MHD)^t_i
 
-Only temperature T is in physical units (K); all others are in code units.
+The following quantities are in physical units: T (K), kappa_{a,s,t} (cm g^-1), and alpha_{a,s,t}
+(cm^-1). All others are in code units.
 
 Optional inputs include:
   -d: direction orthogonal to slice of 3D data
@@ -166,94 +167,7 @@ def main(**kwargs):
   kappa_a_coefficient = 7.04536e25 + 1.95705e24
 
   # Set derived dependencies
-  derived_dependencies = {}
-  derived_dependencies['pgas'] = ('eint',)
-  names = ('pgas_rho', 'T')
-  for name in names:
-    derived_dependencies[name] = ('dens', 'eint')
-  derived_dependencies['prad_pgas'] = ('eint', 'r00_ff')
-  names = ('vr_nr', 'vth_nr', 'vph_nr', 'uut', 'ut', 'ux', 'uy', 'uz', 'ur', 'uth', 'uph', 'u_t', \
-      'u_x', 'u_y', 'u_z', 'u_r', 'u_th', 'u_ph', 'vx', 'vy', 'vz', 'vr_rel', 'vth_rel', 'vph_rel')
-  for name in names:
-    derived_dependencies[name] = ('velx', 'vely', 'velz')
-  names = ('Br_nr', 'Bth_nr', 'Bph_nr', 'pmag_nr', 'cons_em_nr_t')
-  for name in names:
-    derived_dependencies[name] = ('bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['beta_inv_nr'] = ('eint', 'bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['sigma_nr'] = ('dens', 'bcc1', 'bcc2', 'bcc3')
-  names = ('bt', 'bx', 'by', 'bz', 'br', 'bth', 'bph', 'b_t', 'b_x', 'b_y', 'b_z', 'b_r', 'b_th', \
-      'b_ph', 'Br_rel', 'Bth_rel', 'Bph_rel', 'pmag_rel', 'cons_em_rel_t', 'cons_em_rel_x', \
-      'cons_em_rel_y', 'cons_em_rel_z')
-  for name in names:
-    derived_dependencies[name] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['beta_inv_rel'] = ('eint', 'velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['sigma_rel'] = ('dens', 'velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
-  names = ('sigmah_rel', 'va_rel')
-  for name in names:
-    derived_dependencies[name] = ('dens', 'eint', 'velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
-  derived_dependencies['pmag_prad'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3', 'r00_ff')
-  derived_dependencies['prad'] = ('r00_ff',)
-  names = ('Rtr', 'Rtth', 'Rtph')
-  for name in names:
-    derived_dependencies[name] = ('r01', 'r02', 'r03')
-  names = ('Rrr', 'Rthth', 'Rphph', 'Rrth', 'Rrph', 'Rthph')
-  for name in names:
-    derived_dependencies[name] = ('r11', 'r12', 'r13', 'r22', 'r23', 'r33')
-  derived_dependencies['Rtx_Rtt'] = ('r00', 'r01')
-  derived_dependencies['Rty_Rtt'] = ('r00', 'r02')
-  derived_dependencies['Rtz_Rtt'] = ('r00', 'r03')
-  derived_dependencies['Rxx_Rtt'] = ('r00', 'r11')
-  derived_dependencies['Ryy_Rtt'] = ('r00', 'r22')
-  derived_dependencies['Rzz_Rtt'] = ('r00', 'r33')
-  derived_dependencies['Rxy_Rtt'] = ('r00', 'r12')
-  derived_dependencies['Rxz_Rtt'] = ('r00', 'r13')
-  derived_dependencies['Ryz_Rtt'] = ('r00', 'r23')
-  names = ('Rtr_Rtt', 'Rtth_Rtt', 'Rtph_Rtt')
-  for name in names:
-    derived_dependencies[name] = ('r00', 'r01', 'r02', 'r03')
-  names = ('Rrr_Rtt', 'Rthth_Rtt', 'Rphph_Rtt', 'Rrth_Rtt', 'Rrph_Rtt', 'Rthph_Rtt')
-  for name in names:
-    derived_dependencies[name] = ('r00', 'r11', 'r12', 'r13', 'r22', 'r23', 'r33')
-  derived_dependencies['R01_R00_ff'] = ('r00_ff', 'r01_ff')
-  derived_dependencies['R02_R00_ff'] = ('r00_ff', 'r02_ff')
-  derived_dependencies['R03_R00_ff'] = ('r00_ff', 'r03_ff')
-  derived_dependencies['R11_R00_ff'] = ('r00_ff', 'r11_ff')
-  derived_dependencies['R22_R00_ff'] = ('r00_ff', 'r22_ff')
-  derived_dependencies['R33_R00_ff'] = ('r00_ff', 'r33_ff')
-  derived_dependencies['R12_R00_ff'] = ('r00_ff', 'r12_ff')
-  derived_dependencies['R13_R00_ff'] = ('r00_ff', 'r13_ff')
-  derived_dependencies['R23_R00_ff'] = ('r00_ff', 'r23_ff')
-  names = ('kappa_a', 'kappa_t', 'alpha_a', 'alpha_t', 'tau_a', 'tau_t')
-  for name in names:
-    derived_dependencies[name] = ('dens', 'eint')
-  derived_dependencies['kappa_s'] = ()
-  names = ('alpha_s', 'tau_s')
-  for name in names:
-    derived_dependencies[name] = ('dens',)
-  derived_dependencies['wgas'] = ('dens', 'eint')
-  derived_dependencies['wgasrad'] = ('dens', 'eint', 'r00_ff')
-  names = ('wmhd', 'Bemhd', 'cons_mhd_nr_t', 'cons_mhd_rel_t', 'cons_mhd_rel_x', 'cons_mhd_rel_y', \
-      'cons_mhd_rel_z')
-  for name in names:
-    derived_dependencies[name] = ('dens', 'eint', 'velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
-  names = ('wmhdrad', 'Bemhdrad')
-  for name in names:
-    derived_dependencies[name] = \
-        ('dens', 'eint', 'velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3', 'r00_ff')
-  names = ('Begas', 'cons_hydro_nr_t', 'cons_hydro_rel_t', 'cons_hydro_rel_x', 'cons_hydro_rel_y', \
-      'cons_hydro_rel_z')
-  for name in names:
-    derived_dependencies[name] = ('dens', 'eint', 'velx', 'vely', 'velz')
-  derived_dependencies['Begasrad'] = ('dens', 'eint', 'velx', 'vely', 'velz', 'r00_ff')
-  names = ('cons_hydro_nr_x', 'cons_mhd_nr_x')
-  for name in names:
-    derived_dependencies[name] = ('dens', 'velx')
-  names = ('cons_hydro_nr_y', 'cons_mhd_nr_y')
-  for name in names:
-    derived_dependencies[name] = ('dens', 'vely')
-  names = ('cons_hydro_nr_z', 'cons_mhd_nr_z')
-  for name in names:
-    derived_dependencies[name] = ('dens', 'velz')
+  derived_dependencies = set_derived_dependencies()
 
   # Read data
   with open(kwargs['data_file'], 'rb') as f:
@@ -455,6 +369,11 @@ def main(**kwargs):
     if kwargs['horizon'] or kwargs['horizon_mask'] or kwargs['ergosphere']:
       assert input_data['coord']['general_rel'] == 'true', \
           '"horizon", "horizon_mask", and "ergosphere" options only pertain to GR data.'
+    names = ('velx', 'vely', 'velz')
+    if kwargs['variable'] in names:
+      general_rel_v = bool(input_data['coord']['general_rel'])
+    else:
+      general_rel_v = False
 
     # Extract black hole spin from input file metadata
     names = ('uut', 'ut', 'ux', 'uy', 'uz', 'ur', 'uth', 'uph', 'u_t', 'u_x', 'u_y', 'u_z', 'u_r', \
@@ -1081,16 +1000,16 @@ def main(**kwargs):
       ugas = quantities['eint']
       pgas = (gamma_adi - 1.0) * ugas
       wgas = rho + ugas + pgas
-      names = ('cond_hydro_rel_t', 'cons_mhd_rel_t')
+      names = ('cons_hydro_rel_t', 'cons_mhd_rel_t')
       if kwargs['variable'] in ['derived:' + name for name in names]:
         quantity = wgas * ut * u_t + pgas
-      names = ('cond_hydro_rel_x', 'cons_mhd_rel_x')
+      names = ('cons_hydro_rel_x', 'cons_mhd_rel_x')
       if kwargs['variable'] in ['derived:' + name for name in names]:
         quantity = wgas * ut * u_x
-      names = ('cond_hydro_rel_y', 'cons_mhd_rel_y')
+      names = ('cons_hydro_rel_y', 'cons_mhd_rel_y')
       if kwargs['variable'] in ['derived:' + name for name in names]:
         quantity = wgas * ut * u_y
-      names = ('cond_hydro_rel_z', 'cons_mhd_rel_z')
+      names = ('cons_hydro_rel_z', 'cons_mhd_rel_z')
       if kwargs['variable'] in ['derived:' + name for name in names]:
         quantity = wgas * ut * u_z
     names = ('cons_em_rel_t', 'cons_em_rel_x', 'cons_em_rel_y', 'cons_em_rel_z', 'cons_mhd_rel_t', \
@@ -1104,22 +1023,29 @@ def main(**kwargs):
           lower_vector(bt, bx, by, bz, g_tt, g_tx, g_ty, g_tz, g_xx, g_xy, g_xz, g_yy, g_yz, g_zz)
       umag = 0.5 * (b_t * bt + b_x * bx + b_y * by + b_z * bz)
       pmag = umag
-      names = ('cond_em_rel_t', 'cons_mhd_rel_t')
+      names = ('cons_em_rel_t', 'cons_mhd_rel_t')
       if kwargs['variable'] in ['derived:' + name for name in names]:
         quantity += (umag + pmag) * ut * u_t + pmag - bt * b_t
-      names = ('cond_em_rel_x', 'cons_mhd_rel_x')
+      names = ('cons_em_rel_x', 'cons_mhd_rel_x')
       if kwargs['variable'] in ['derived:' + name for name in names]:
         quantity += (umag + pmag) * ut * u_x - bt * b_x
-      names = ('cond_em_rel_y', 'cons_mhd_rel_y')
+      names = ('cons_em_rel_y', 'cons_mhd_rel_y')
       if kwargs['variable'] in ['derived:' + name for name in names]:
         quantity += (umag + pmag) * ut * u_y - bt * b_y
-      names = ('cond_em_rel_z', 'cons_mhd_rel_z')
+      names = ('cons_em_rel_z', 'cons_mhd_rel_z')
       if kwargs['variable'] in ['derived:' + name for name in names]:
         quantity += (umag + pmag) * ut * u_z - bt * b_z
 
   # Extract quantity without derivation
   if kwargs['variable'][:8] != 'derived:':
     quantity = quantities[variable_name]
+
+  # Set colorbar label
+  labels = set_labels(general_rel_v)
+  if variable_name in labels:
+    label = labels[variable_name]
+  else:
+    label = variable_name
 
   # Calculate color scaling
   if kwargs['vmin'] is None:
@@ -1152,7 +1078,7 @@ def main(**kwargs):
         interpolation='none', origin='lower', extent=extents[block_num])
 
   # Make colorbar
-  plt.colorbar()
+  plt.colorbar(label=label)
 
   # Mark and/or mask horizon
   if kwargs['horizon'] or kwargs['horizon_mask']:
@@ -1270,6 +1196,268 @@ def main(**kwargs):
     plt.savefig(kwargs['output_file'], dpi=kwargs['dpi'])
   else:
     plt.show()
+
+# Function that defines dependencies for derived quantities
+def set_derived_dependencies():
+  derived_dependencies = {}
+  derived_dependencies['pgas'] = ('eint',)
+  names = ('pgas_rho', 'T')
+  for name in names:
+    derived_dependencies[name] = ('dens', 'eint')
+  derived_dependencies['prad_pgas'] = ('eint', 'r00_ff')
+  names = ('vr_nr', 'vth_nr', 'vph_nr', 'uut', 'ut', 'ux', 'uy', 'uz', 'ur', 'uth', 'uph', 'u_t', \
+      'u_x', 'u_y', 'u_z', 'u_r', 'u_th', 'u_ph', 'vx', 'vy', 'vz', 'vr_rel', 'vth_rel', 'vph_rel')
+  for name in names:
+    derived_dependencies[name] = ('velx', 'vely', 'velz')
+  names = ('Br_nr', 'Bth_nr', 'Bph_nr', 'pmag_nr', 'cons_em_nr_t')
+  for name in names:
+    derived_dependencies[name] = ('bcc1', 'bcc2', 'bcc3')
+  derived_dependencies['beta_inv_nr'] = ('eint', 'bcc1', 'bcc2', 'bcc3')
+  derived_dependencies['sigma_nr'] = ('dens', 'bcc1', 'bcc2', 'bcc3')
+  names = ('bt', 'bx', 'by', 'bz', 'br', 'bth', 'bph', 'b_t', 'b_x', 'b_y', 'b_z', 'b_r', 'b_th', \
+      'b_ph', 'Br_rel', 'Bth_rel', 'Bph_rel', 'pmag_rel', 'cons_em_rel_t', 'cons_em_rel_x', \
+      'cons_em_rel_y', 'cons_em_rel_z')
+  for name in names:
+    derived_dependencies[name] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
+  derived_dependencies['beta_inv_rel'] = ('eint', 'velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
+  derived_dependencies['sigma_rel'] = ('dens', 'velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
+  names = ('sigmah_rel', 'va_rel')
+  for name in names:
+    derived_dependencies[name] = ('dens', 'eint', 'velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
+  derived_dependencies['pmag_prad'] = ('velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3', 'r00_ff')
+  derived_dependencies['prad'] = ('r00_ff',)
+  names = ('Rtr', 'Rtth', 'Rtph')
+  for name in names:
+    derived_dependencies[name] = ('r01', 'r02', 'r03')
+  names = ('Rrr', 'Rthth', 'Rphph', 'Rrth', 'Rrph', 'Rthph')
+  for name in names:
+    derived_dependencies[name] = ('r11', 'r12', 'r13', 'r22', 'r23', 'r33')
+  derived_dependencies['Rtx_Rtt'] = ('r00', 'r01')
+  derived_dependencies['Rty_Rtt'] = ('r00', 'r02')
+  derived_dependencies['Rtz_Rtt'] = ('r00', 'r03')
+  derived_dependencies['Rxx_Rtt'] = ('r00', 'r11')
+  derived_dependencies['Ryy_Rtt'] = ('r00', 'r22')
+  derived_dependencies['Rzz_Rtt'] = ('r00', 'r33')
+  derived_dependencies['Rxy_Rtt'] = ('r00', 'r12')
+  derived_dependencies['Rxz_Rtt'] = ('r00', 'r13')
+  derived_dependencies['Ryz_Rtt'] = ('r00', 'r23')
+  names = ('Rtr_Rtt', 'Rtth_Rtt', 'Rtph_Rtt')
+  for name in names:
+    derived_dependencies[name] = ('r00', 'r01', 'r02', 'r03')
+  names = ('Rrr_Rtt', 'Rthth_Rtt', 'Rphph_Rtt', 'Rrth_Rtt', 'Rrph_Rtt', 'Rthph_Rtt')
+  for name in names:
+    derived_dependencies[name] = ('r00', 'r11', 'r12', 'r13', 'r22', 'r23', 'r33')
+  derived_dependencies['R01_R00_ff'] = ('r00_ff', 'r01_ff')
+  derived_dependencies['R02_R00_ff'] = ('r00_ff', 'r02_ff')
+  derived_dependencies['R03_R00_ff'] = ('r00_ff', 'r03_ff')
+  derived_dependencies['R11_R00_ff'] = ('r00_ff', 'r11_ff')
+  derived_dependencies['R22_R00_ff'] = ('r00_ff', 'r22_ff')
+  derived_dependencies['R33_R00_ff'] = ('r00_ff', 'r33_ff')
+  derived_dependencies['R12_R00_ff'] = ('r00_ff', 'r12_ff')
+  derived_dependencies['R13_R00_ff'] = ('r00_ff', 'r13_ff')
+  derived_dependencies['R23_R00_ff'] = ('r00_ff', 'r23_ff')
+  names = ('kappa_a', 'kappa_t', 'alpha_a', 'alpha_t', 'tau_a', 'tau_t')
+  for name in names:
+    derived_dependencies[name] = ('dens', 'eint')
+  derived_dependencies['kappa_s'] = ()
+  names = ('alpha_s', 'tau_s')
+  for name in names:
+    derived_dependencies[name] = ('dens',)
+  derived_dependencies['wgas'] = ('dens', 'eint')
+  derived_dependencies['wgasrad'] = ('dens', 'eint', 'r00_ff')
+  names = ('wmhd', 'Bemhd', 'cons_mhd_nr_t', 'cons_mhd_rel_t', 'cons_mhd_rel_x', 'cons_mhd_rel_y', \
+      'cons_mhd_rel_z')
+  for name in names:
+    derived_dependencies[name] = ('dens', 'eint', 'velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3')
+  names = ('wmhdrad', 'Bemhdrad')
+  for name in names:
+    derived_dependencies[name] = \
+        ('dens', 'eint', 'velx', 'vely', 'velz', 'bcc1', 'bcc2', 'bcc3', 'r00_ff')
+  names = ('Begas', 'cons_hydro_nr_t', 'cons_hydro_rel_t', 'cons_hydro_rel_x', 'cons_hydro_rel_y', \
+      'cons_hydro_rel_z')
+  for name in names:
+    derived_dependencies[name] = ('dens', 'eint', 'velx', 'vely', 'velz')
+  derived_dependencies['Begasrad'] = ('dens', 'eint', 'velx', 'vely', 'velz', 'r00_ff')
+  names = ('cons_hydro_nr_x', 'cons_mhd_nr_x')
+  for name in names:
+    derived_dependencies[name] = ('dens', 'velx')
+  names = ('cons_hydro_nr_y', 'cons_mhd_nr_y')
+  for name in names:
+    derived_dependencies[name] = ('dens', 'vely')
+  names = ('cons_hydro_nr_z', 'cons_mhd_nr_z')
+  for name in names:
+    derived_dependencies[name] = ('dens', 'velz')
+  return derived_dependencies
+
+# Function that defines colorbar labels
+def set_labels(general_rel_v):
+  labels = {}
+  labels['dens'] = r'$\rho$'
+  labels['eint'] = r'$u_\mathrm{gas}$'
+  if general_rel_v:
+    labels['velx'] = r'$u^{x^\prime}$'
+    labels['vely'] = r'$u^{y^\prime}$'
+    labels['velz'] = r'$u^{z^\prime}$'
+  else:
+    labels['velx'] = '$v^x$'
+    labels['vely'] = '$v^y$'
+    labels['velz'] = '$v^z$'
+  labels['bcc1'] = '$B^x$'
+  labels['bcc2'] = '$B^y$'
+  labels['bcc3'] = '$B^z$'
+  labels['r00'] = '$R^{tt}$'
+  labels['r01'] = '$R^{tx}$'
+  labels['r02'] = '$R^{ty}$'
+  labels['r03'] = '$R^{tz}$'
+  labels['r11'] = '$R^{xx}$'
+  labels['r12'] = '$R^{xy}$'
+  labels['r13'] = '$R^{xz}$'
+  labels['r22'] = '$R^{yy}$'
+  labels['r23'] = '$R^{yz}$'
+  labels['r33'] = '$R^{zz}$'
+  labels['r00_ff'] = r'$R^{\bar{t}\bar{t}}$'
+  labels['r01_ff'] = r'$R^{\bar{t}\bar{x}}$'
+  labels['r02_ff'] = r'$R^{\bar{t}\bar{y}}$'
+  labels['r03_ff'] = r'$R^{\bar{t}\bar{z}}$'
+  labels['r11_ff'] = r'$R^{\bar{x}\bar{x}}$'
+  labels['r12_ff'] = r'$R^{\bar{x}\bar{y}}$'
+  labels['r13_ff'] = r'$R^{\bar{x}\bar{z}}$'
+  labels['r22_ff'] = r'$R^{\bar{y}\bar{y}}$'
+  labels['r23_ff'] = r'$R^{\bar{y}\bar{z}}$'
+  labels['r33_ff'] = r'$R^{\bar{z}\bar{z}}$'
+  labels['pgas'] = r'$p_\mathrm{gas}$'
+  labels['pgas_rho'] = r'$p_\mathrm{gas} / \rho$'
+  labels['T'] = r'$T$ ($\mathrm{K}$)'
+  labels['prad_pgas'] = r'$p_\mathrm{rad} / p_\mathrm{gas}$'
+  labels['vr_nr'] = r'$v^{\hat{r}}$'
+  labels['vth_nr'] = r'$v^{\hat{\theta}}$'
+  labels['vph_nr'] = r'$v^{\hat{\phi}}$'
+  labels['uut'] = r'$u^{t^\prime}$'
+  labels['ut'] = '$u^t$'
+  labels['ux'] = '$u^x$'
+  labels['uy'] = '$u^y$'
+  labels['uz'] = '$u^z$'
+  labels['ur'] = '$u^r$'
+  labels['uth'] = r'$u^\theta$'
+  labels['uph'] = r'$u^\phi$'
+  labels['u_t'] = '$u_t$'
+  labels['u_x'] = '$u_x$'
+  labels['u_y'] = '$u_y$'
+  labels['u_z'] = '$u_z$'
+  labels['u_r'] = '$u_r$'
+  labels['u_th'] = r'$u_\theta$'
+  labels['u_ph'] = r'$u_\phi$'
+  labels['vx'] = '$v^x$'
+  labels['vy'] = '$v^y$'
+  labels['vz'] = '$v^z$'
+  labels['vr_rel'] = '$v^r$'
+  labels['vth_rel'] = r'$v^\theta$'
+  labels['vph_rel'] = r'$v^\phi$'
+  labels['Br_nr'] = r'$B^{\hat{r}}$'
+  labels['Bth_nr'] = r'$B^{\hat{\theta}}$'
+  labels['Bph_nr'] = r'$B^{\hat{\phi}}$'
+  labels['pmag_nr'] = r'$p_\mathrm{mag}$'
+  labels['beta_inv_nr'] = r'$\beta^{-1}$'
+  labels['sigma_nr'] = r'$\sigma$'
+  labels['bt'] = '$b^t$'
+  labels['bx'] = '$b^x$'
+  labels['by'] = '$b^y$'
+  labels['bz'] = '$b^z$'
+  labels['br'] = '$b^r$'
+  labels['bth'] = r'$b^\theta$'
+  labels['bph'] = r'$b^\phi$'
+  labels['b_t'] = '$b_t$'
+  labels['b_x'] = '$b_x$'
+  labels['b_y'] = '$b_y$'
+  labels['b_z'] = '$b_z$'
+  labels['b_r'] = '$b_r$'
+  labels['b_th'] = r'$b_\theta$'
+  labels['b_ph'] = r'$b_\phi$'
+  labels['Br_rel'] = '$B^r$'
+  labels['Bth_rel'] = r'$B^\theta$'
+  labels['Bph_rel'] = r'$B^\phi$'
+  labels['pmag_rel'] = r'$p_\mathrm{mag}$'
+  labels['beta_inv_rel'] = r'$\beta^{-1}$'
+  labels['sigma_rel'] = r'$\sigma$'
+  labels['sigmah_rel'] = r'$\sigma_\mathrm{hot}$'
+  labels['va_rel'] = r'$v_\mathrm{A}$'
+  labels['pmag_prad'] = r'$p_\mathrm{mag} / p_\mathrm{rad}$'
+  labels['prad'] = r'$p_\mathrm{rad}$'
+  labels['Rtr'] = '$R^{tr}$'
+  labels['Rtth'] = r'$R^{t\theta}$'
+  labels['Rtph'] = r'$R^{t\phi}$'
+  labels['Rrr'] = '$R^{rr}$'
+  labels['Rthth'] = r'$R^{\theta\theta}$'
+  labels['Rphph'] = r'$R^{\phi\phi}$'
+  labels['Rrth'] = r'$R^{r\theta}$'
+  labels['Rrph'] = r'$R^{r\phi}$'
+  labels['Rthph'] = r'$R^{\theta\phi}$'
+  labels['Rtx_Rtt'] = '$R^{tx} / R^{tt}$'
+  labels['Rty_Rtt'] = '$R^{ty} / R^{tt}$'
+  labels['Rtz_Rtt'] = '$R^{tz} / R^{tt}$'
+  labels['Rxx_Rtt'] = '$R^{xx} / R^{tt}$'
+  labels['Ryy_Rtt'] = '$R^{yy} / R^{tt}$'
+  labels['Rzz_Rtt'] = '$R^{zz} / R^{tt}$'
+  labels['Rxy_Rtt'] = '$R^{xy} / R^{tt}$'
+  labels['Rxz_Rtt'] = '$R^{xz} / R^{tt}$'
+  labels['Ryz_Rtt'] = '$R^{yz} / R^{tt}$'
+  labels['Rtr_Rtt'] = '$R^{tr} / R^{tt}$'
+  labels['Rtth_Rtt'] = r'$R^{t\theta} / R^{tt}$'
+  labels['Rtph_Rtt'] = r'$R^{t\phi} / R^{tt}$'
+  labels['Rrr_Rtt'] = '$R^{rr} / R^{tt}$'
+  labels['Rthth_Rtt'] = r'$R^{\theta\theta} / R^{tt}$'
+  labels['Rphph_Rtt'] = r'$R^{\phi\phi} / R^{tt}$'
+  labels['Rrth_Rtt'] = r'$R^{r\theta} / R^{tt}$'
+  labels['Rrph_Rtt'] = r'$R^{r\phi} / R^{tt}$'
+  labels['Rthph_Rtt'] = r'$R^{\theta\phi} / R^{tt}$'
+  labels['R01_R00_ff'] = r'$R^{\bar{0}\bar{1}} / R^{\bar{0}\bar{0}}$'
+  labels['R02_R00_ff'] = r'$R^{\bar{0}\bar{2}} / R^{\bar{0}\bar{0}}$'
+  labels['R03_R00_ff'] = r'$R^{\bar{0}\bar{3}} / R^{\bar{0}\bar{0}}$'
+  labels['R11_R00_ff'] = r'$R^{\bar{1}\bar{1}} / R^{\bar{0}\bar{0}}$'
+  labels['R22_R00_ff'] = r'$R^{\bar{2}\bar{2}} / R^{\bar{0}\bar{0}}$'
+  labels['R33_R00_ff'] = r'$R^{\bar{3}\bar{3}} / R^{\bar{0}\bar{0}}$'
+  labels['R12_R00_ff'] = r'$R^{\bar{1}\bar{2}} / R^{\bar{0}\bar{0}}$'
+  labels['R13_R00_ff'] = r'$R^{\bar{1}\bar{3}} / R^{\bar{0}\bar{0}}$'
+  labels['R23_R00_ff'] = r'$R^{\bar{2}\bar{3}} / R^{\bar{0}\bar{0}}$'
+  labels['kappa_a'] = r'$\kappa^\mathrm{a}$ ($\mathrm{cm}^2\ \mathrm{g}^{-1}$)'
+  labels['kappa_s'] = r'$\kappa^\mathrm{s}$ ($\mathrm{cm}^2\ \mathrm{g}^{-1}$)'
+  labels['kappa_t'] = r'$\kappa^\mathrm{t}$ ($\mathrm{cm}^2\ \mathrm{g}^{-1}$)'
+  labels['alpha_a'] = r'$\alpha^\mathrm{a}$ ($\mathrm{cm}^{-1}$)'
+  labels['alpha_s'] = r'$\alpha^\mathrm{s}$ ($\mathrm{cm}^{-1}$)'
+  labels['alpha_t'] = r'$\alpha^\mathrm{t}$ ($\mathrm{cm}^{-1}$)'
+  labels['tau_a'] = r'$\alpha^\mathrm{a} r_\mathrm{g}$'
+  labels['tau_s'] = r'$\alpha^\mathrm{s} r_\mathrm{g}$'
+  labels['tau_t'] = r'$\alpha^\mathrm{t} r_\mathrm{g}$'
+  labels['wgas'] = r'$w_\mathrm{gas}$'
+  labels['wmhd'] = r'$w_\mathrm{MHD}$'
+  labels['wgasrad'] = r'$w_\mathrm{gas+rad}$'
+  labels['wmhdrad'] = r'$w_\mathrm{MHD+rad}$'
+  labels['Begas'] = r'$\mathrm{Be}_\mathrm{gas}$'
+  labels['Bemhd'] = r'$\mathrm{Be}_\mathrm{MHD}$'
+  labels['Begasrad'] = r'$\mathrm{Be}_\mathrm{gas+rad}$'
+  labels['Bemhdrad'] = r'$\mathrm{Be}_\mathrm{MHD+rad}$'
+  labels['cons_hydro_nr_t'] = r'$e_\mathrm{hydro}$'
+  labels['cons_hydro_nr_x'] = r'$m_\mathrm{hydro}^x$'
+  labels['cons_hydro_nr_y'] = r'$m_\mathrm{hydro}^y$'
+  labels['cons_hydro_nr_z'] = r'$m_\mathrm{hydro}^z$'
+  labels['cons_em_nr_t'] = r'$e_\mathrm{EM}$'
+  labels['cons_mhd_nr_t'] = r'$e_\mathrm{MHD}$'
+  labels['cons_mhd_nr_x'] = r'$m_\mathrm{MHD}^x$'
+  labels['cons_mhd_nr_y'] = r'$m_\mathrm{MHD}^y$'
+  labels['cons_mhd_nr_z'] = r'$m_\mathrm{MHD}^z$'
+  labels['cons_hydro_rel_t'] = r'$(T_\mathrm{hydro})^t{}_t$'
+  labels['cons_hydro_rel_x'] = r'$(T_\mathrm{hydro})^t{}_x$'
+  labels['cons_hydro_rel_y'] = r'$(T_\mathrm{hydro})^t{}_y$'
+  labels['cons_hydro_rel_z'] = r'$(T_\mathrm{hydro})^t{}_z$'
+  labels['cons_em_rel_t'] = r'$(T_\mathrm{EM})^t{}_t$'
+  labels['cons_em_rel_x'] = r'$(T_\mathrm{EM})^t{}_x$'
+  labels['cons_em_rel_y'] = r'$(T_\mathrm{EM})^t{}_y$'
+  labels['cons_em_rel_z'] = r'$(T_\mathrm{EM})^t{}_z$'
+  labels['cons_mhd_rel_t'] = r'$(T_\mathrm{MHD})^t{}_t$'
+  labels['cons_mhd_rel_x'] = r'$(T_\mathrm{MHD})^t{}_x$'
+  labels['cons_mhd_rel_y'] = r'$(T_\mathrm{MHD})^t{}_y$'
+  labels['cons_mhd_rel_z'] = r'$(T_\mathrm{MHD})^t{}_z$'
+  return labels
 
 # Function for calculating cell coordinates
 def xyz(num_blocks_used, block_nx1, block_nx2, extents, dimension, location):
