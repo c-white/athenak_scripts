@@ -1032,7 +1032,7 @@ def main(**kwargs):
   if kwargs['variable'][:8] != 'derived:':
     quantity = quantities[variable_name]
 
-  # Calculate colors
+  # Calculate color scaling
   if kwargs['vmin'] is None:
     vmin = np.nanmin(quantity)
   else:
@@ -1041,13 +1041,13 @@ def main(**kwargs):
     vmax = np.nanmax(quantity)
   else:
     vmax = kwargs['vmax']
-
-  # Choose colormap norm
   if kwargs['norm'] == 'linear':
     norm = colors.Normalize(vmin, vmax)
     vmin = None
     vmax = None
   elif kwargs['norm'] == 'log':
+    if vmin == 0.0 and vmax > 0.0:
+      vmin = np.nanmin(np.where(quantity > 0.0, quantity, np.nan))
     norm = colors.LogNorm(vmin, vmax)
     vmin = None
     vmax = None
