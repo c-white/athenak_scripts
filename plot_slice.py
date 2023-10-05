@@ -149,7 +149,6 @@ def main(**kwargs):
   ergosphere_line_width = 1.0
   x1_labelpad = 2.0
   x2_labelpad = 2.0
-  dpi = 300
 
   # Adjust user inputs
   if kwargs['dimension'] == '1':
@@ -1268,7 +1267,7 @@ def main(**kwargs):
 
   # Save or display figure
   if kwargs['output_file'] != 'show':
-    plt.savefig(kwargs['output_file'], dpi=dpi)
+    plt.savefig(kwargs['output_file'], dpi=kwargs['dpi'])
   else:
     plt.show()
 
@@ -1474,5 +1473,6 @@ if __name__ == '__main__':
       help='flag indicating black hole ergosphere should be marked')
   parser.add_argument('--ergosphere_color', default='gray', \
       help='color string for ergosphere marker')
+  parser.add_argument('--dpi', type=float, default=300, help='resolution of output figure')
   args = parser.parse_args()
   main(**vars(args))
