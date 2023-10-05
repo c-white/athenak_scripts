@@ -1040,20 +1040,25 @@ def main(**kwargs):
   if kwargs['variable'][:8] != 'derived:':
     quantity = quantities[variable_name]
 
-  # Set colorbar label
-  labels = set_labels(general_rel_v)
-  if variable_name in labels:
-    label = labels[variable_name]
+  # Mask horizon for purposes of calculating colorbar limits
+  if kwargs['horizon_mask']:
+    a2 = bh_a ** 2
+    r_hor = 1.0 + (1.0 - a2) ** 0.5
+    x, y, z = \
+        xyz(num_blocks_used, block_nx1, block_nx2, extents, kwargs['dimension'], kwargs['location'])
+    rr2 = x ** 2 + y ** 2 + z ** 2
+    r = np.sqrt(0.5 * (rr2 - a2 + np.sqrt((rr2 - a2) ** 2 + 4.0 * a2 * z ** 2)))
+    quantity_masked = np.where(r > r_hor, quantity, np.nan)
   else:
-    label = variable_name
+    quantity_masked = quantity
 
   # Calculate color scaling
   if kwargs['vmin'] is None:
-    vmin = np.nanmin(quantity)
+    vmin = np.nanmin(quantity_masked)
   else:
     vmin = kwargs['vmin']
   if kwargs['vmax'] is None:
-    vmax = np.nanmax(quantity)
+    vmax = np.nanmax(quantity_masked)
   else:
     vmax = kwargs['vmax']
   if kwargs['norm'] == 'linear':
@@ -1062,12 +1067,19 @@ def main(**kwargs):
     vmax = None
   elif kwargs['norm'] == 'log':
     if vmin == 0.0 and vmax > 0.0:
-      vmin = np.nanmin(np.where(quantity > 0.0, quantity, np.nan))
+      vmin = np.nanmin(np.where(quantity_masked > 0.0, quantity_masked, np.nan))
     norm = colors.LogNorm(vmin, vmax)
     vmin = None
     vmax = None
   else:
     norm = kwargs['norm']
+
+  # Set colorbar label
+  labels = set_labels(general_rel_v)
+  if variable_name in labels:
+    label = labels[variable_name]
+  else:
+    label = variable_name
 
   # Prepare figure
   plt.figure()
