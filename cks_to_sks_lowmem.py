@@ -4,7 +4,7 @@
 Script for converting CKS AthenaK GRMHD data to SKS NumPy format.
 
 Usage:
-[python3] cks_to_sks.py \
+[python3] cks_to_sks_lowmem.py \
     <input_file_base> <output_file_base> \
     <frame_min> <frame_max> <frame_stride> \
     [--r_min <r_in>] [--r_max <r_out>] [--n_r <n_r>] \
@@ -44,6 +44,9 @@ the primitives are obtained via trilinear interpolation on the old (z,y,x) grid
 to the new cell center. Note that for coarse new grids this subsamples the data,
 rather than averaging data in all old cells contained within a new cell. On the
 new grid, quantities are transformed to spherical components.
+
+This script is optimized for using less memory. In particular, it does not read the entire CKS
+dataset into memory at once.
 """
 
 # Python standard modules
@@ -113,16 +116,16 @@ def main(**kwargs):
     input_file = '{0}.{1:05d}.bin'.format(input_file_base, frame)
     output_file = '{0}.{1:05d}.npz'.format(output_file_base, frame)
 
-    # Read input data
-    with open(input_file, 'rb') as f:
+    # Read non-varying input data on first pass
+    if frame_n == 0:
+      with open(input_file, 'rb') as f:
 
-      # Get file size
-      f.seek(0, 2)
-      file_size = f.tell()
-      f.seek(0, 0)
+        # Get file size
+        f.seek(0, 2)
+        file_size = f.tell()
+        f.seek(0, 0)
 
-      # Read header metadata
-      if frame_n == 0:
+        # Read header metadata
         line = f.readline().decode('ascii')
         if line != 'Athena binary output version=1.1\n':
           raise RuntimeError('Unrecognized data file format.')
@@ -146,16 +149,8 @@ def main(**kwargs):
         if line[:16] != '  header offset=':
           raise RuntimeError('Could not read header offset.')
         header_offset = int(line[16:])
-      else:
-        for n in range(8):
-          next(f)
-        line = f.readline().decode('ascii')
-        if line[:16] != '  header offset=':
-          raise RuntimeError('Could not read header offset.')
-        header_offset = int(line[16:])
 
-      # Process header metadata
-      if frame_n == 0:
+        # Process header metadata
         if location_size not in (4, 8):
           raise RuntimeError('Only 4- and 8-byte integer types supported for location data.')
         location_format = 'f' if location_size == 4 else 'd'
@@ -176,8 +171,7 @@ def main(**kwargs):
         variable_names_sorted = [name for _, name in sorted(zip(variable_inds, variable_names))]
         variable_inds_sorted = [ind for ind, _ in sorted(zip(variable_inds, variable_names))]
 
-      # Read input file metadata
-      if frame_n == 0:
+        # Read input file metadata
         input_data = {}
         start_of_data = f.tell() + header_offset
         while f.tell() < start_of_data:
@@ -190,11 +184,8 @@ def main(**kwargs):
             continue
           key, val = line.split('=', 1)
           input_data[section_name][key.strip()] = val.split('#', 1)[0].strip()
-      else:
-        f.seek(header_offset, 1)
 
-      # Extract grid limits from input file metadata
-      if frame_n == 0:
+        # Extract grid limits from input file metadata
         try:
           x1_min = float(input_data['mesh']['x1min'])
           x1_max = float(input_data['mesh']['x1max'])
@@ -205,74 +196,54 @@ def main(**kwargs):
         except:
           raise RuntimeError('Unable to find grid limits in input file.')
 
-      # Extract black hole spin from input file metadata
-      if frame_n == 0:
+        # Extract black hole spin from input file metadata
         try:
           a = float(input_data['coord']['a'])
         except:
           raise RuntimeError('Unable to find black hole spin in input file.')
 
-      # Extract adiabatic index from input file metadata
-      if frame_n == 0:
+        # Extract adiabatic index from input file metadata
         try:
           gamma_adi = float(input_data['mhd']['gamma'])
         except:
           raise RuntimeError('Unable to find adiabatic index in input file.')
 
-      # Prepare lists to hold results
-      if frame_n == 0:
+        # Prepare list to hold block limits
         block_lims = []
-        data_cks = {}
-        for name in variable_names_sorted:
-          data_cks[name] = []
 
-      # Go through blocks
-      first_time = True if frame_n == 0 else False
-      block_n = 0
-      while f.tell() < file_size:
+        # Go through blocks
+        first_time = True
+        block_n = 0
+        while f.tell() < file_size:
 
-        # Read and process grid structure data
-        if first_time:
-          block_indices = struct.unpack('@6i', f.read(24))
-          n_x = block_indices[1] - block_indices[0] + 1
-          n_y = block_indices[3] - block_indices[2] + 1
-          n_z = block_indices[5] - block_indices[4] + 1
-          cells_per_block = n_z * n_y * n_x
-          block_cell_format = '=' + str(cells_per_block) + variable_format
-          variable_data_size = cells_per_block * variable_size
-          first_time = False
-        else:
-          f.seek(24, 1)
-        f.seek(16, 1)
-
-        # Read coordinate data
-        if frame_n == 0:
-          block_lims.append(struct.unpack('=6' + location_format, f.read(6 * location_size)))
-        else:
-          f.seek(6 * location_size, 1)
-
-        # Read cell data
-        cell_data_start = f.tell()
-        for ind, name in zip(variable_inds_sorted, variable_names_sorted):
-          f.seek(cell_data_start + ind * variable_data_size, 0)
-          if frame_n == 0:
-            data_cks[name].append(np.array(struct.unpack(block_cell_format, \
-                f.read(variable_data_size))).reshape(n_z, n_y, n_x))
+          # Read and process grid structure data
+          if first_time:
+            block_indices = struct.unpack('@6i', f.read(24))
+            n_x = block_indices[1] - block_indices[0] + 1
+            n_y = block_indices[3] - block_indices[2] + 1
+            n_z = block_indices[5] - block_indices[4] + 1
+            cells_per_block = n_z * n_y * n_x
+            block_cell_format = '=' + str(cells_per_block) + variable_format
+            variable_data_size = cells_per_block * variable_size
+            first_time = False
+            f.seek(16, 1)
           else:
-            data_cks[name][block_n] = np.array(struct.unpack(block_cell_format, \
-                f.read(variable_data_size))).reshape(n_z, n_y, n_x)
-        f.seek((num_variables_base - ind - 1) * variable_data_size, 1)
+            f.seek(40, 1)
 
-        # Advance block counter
-        block_n += 1
+          # Read coordinate data
+          block_lims.append(struct.unpack('=6' + location_format, f.read(6 * location_size)))
+
+          # Skip cell data
+          f.seek(num_variables_base * variable_data_size, 1)
+
+          # Advance block counter
+          block_n += 1
 
     # Process input data
     if frame_n == 0:
       a2 = a ** 2
       block_lims = np.array(block_lims)
       n_b = block_n
-      for name in variable_names_sorted:
-        data_cks[name] = np.array(data_cks[name])
 
     # Adjust parameters
     if frame_n == 0:
@@ -360,16 +331,56 @@ def main(**kwargs):
               inds[1,ind_ph,ind_th,ind_r] = ind_z
               inds[2,ind_ph,ind_th,ind_r] = ind_y
               inds[3,ind_ph,ind_th,ind_r] = ind_x
+      blocks_to_use = np.unique(inds[0,...])
 
-    # Remap data to SKS grid
+    # Prepare arrays to hold global data on spherical grid
     if frame_n == 0:
       data_sks = {}
       for quantity in quantities_to_extract:
         data_sks[quantity] = np.empty((n_ph, n_th, n_r))
-    for ind_ph in range(n_ph):
-      for ind_th in range(n_th):
-        for ind_r in range(n_r):
-          ind_b = inds[0,ind_ph,ind_th,ind_r]
+
+    # Read varying input data
+    with open(input_file, 'rb') as f:
+
+      # Get file size
+      f.seek(0, 2)
+      file_size = f.tell()
+      f.seek(0, 0)
+
+      # Read header metadata
+      for n in range(8):
+        next(f)
+      line = f.readline().decode('ascii')
+      if line[:16] != '  header offset=':
+        raise RuntimeError('Could not read header offset.')
+      header_offset = int(line[16:])
+
+      # Skip input file metadata
+      f.seek(header_offset, 1)
+
+      # Prepare dictionary to hold local data on Cartesian grid
+      data_cks = {}
+
+      # Go through blocks
+      block_metadata_size = 40 + 6 * location_size
+      block_size = block_metadata_size + num_variables_base * variable_data_size
+      block_n_previous = -1
+      for block_n_current in blocks_to_use:
+
+        # Skip to block cell data
+        f.seek((block_n_current - block_n_previous - 1) * block_size + block_metadata_size, 1)
+        cell_data_start = f.tell()
+
+        # Read cell data
+        for ind, name in zip(variable_inds_sorted, variable_names_sorted):
+          f.seek(cell_data_start + ind * variable_data_size, 0)
+          data_cks[name] = np.array(struct.unpack(block_cell_format, \
+              f.read(variable_data_size))).reshape(n_z, n_y, n_x)
+        f.seek((num_variables_base - ind - 1) * variable_data_size, 1)
+
+        # Remap data to SKS grid
+        inds_ph_th_r = np.where(inds[0,...] == block_n_current)
+        for ind_ph, ind_th, ind_r in zip(*inds_ph_th_r):
           ind_z = inds[1,ind_ph,ind_th,ind_r]
           ind_y = inds[2,ind_ph,ind_th,ind_r]
           ind_x = inds[3,ind_ph,ind_th,ind_r]
@@ -378,14 +389,14 @@ def main(**kwargs):
             weight_y = weights[1,ind_ph,ind_th,ind_r]
             weight_x = weights[2,ind_ph,ind_th,ind_r]
             for quantity in quantities_to_extract:
-              val_mmm = data_cks[quantity][ind_b,ind_z,ind_y,ind_x]
-              val_mmp = data_cks[quantity][ind_b,ind_z,ind_y,ind_x+1]
-              val_mpm = data_cks[quantity][ind_b,ind_z,ind_y+1,ind_x]
-              val_mpp = data_cks[quantity][ind_b,ind_z,ind_y+1,ind_x+1]
-              val_pmm = data_cks[quantity][ind_b,ind_z+1,ind_y,ind_x]
-              val_pmp = data_cks[quantity][ind_b,ind_z+1,ind_y,ind_x+1]
-              val_ppm = data_cks[quantity][ind_b,ind_z+1,ind_y+1,ind_x]
-              val_ppp = data_cks[quantity][ind_b,ind_z+1,ind_y+1,ind_x+1]
+              val_mmm = data_cks[quantity][ind_z,ind_y,ind_x]
+              val_mmp = data_cks[quantity][ind_z,ind_y,ind_x+1]
+              val_mpm = data_cks[quantity][ind_z,ind_y+1,ind_x]
+              val_mpp = data_cks[quantity][ind_z,ind_y+1,ind_x+1]
+              val_pmm = data_cks[quantity][ind_z+1,ind_y,ind_x]
+              val_pmp = data_cks[quantity][ind_z+1,ind_y,ind_x+1]
+              val_ppm = data_cks[quantity][ind_z+1,ind_y+1,ind_x]
+              val_ppp = data_cks[quantity][ind_z+1,ind_y+1,ind_x+1]
               data_sks[quantity][ind_ph,ind_th,ind_r] = (1.0 - weight_z) * ((1.0 - weight_y) \
                   * ((1.0 - weight_x) * val_mmm + weight_x * val_mmp) + weight_y * ((1.0 \
                   - weight_x) * val_mpm + weight_x * val_mpp)) + weight_z * ((1.0 - weight_y) \
@@ -393,7 +404,10 @@ def main(**kwargs):
                   - weight_x) * val_ppm + weight_x * val_ppp))
           else:
             for quantity in quantities_to_extract:
-              data_sks[quantity][ind_ph,ind_th,ind_r] = data_cks[quantity][ind_b,ind_z,ind_y,ind_x]
+              data_sks[quantity][ind_ph,ind_th,ind_r] = data_cks[quantity][ind_z,ind_y,ind_x]
+
+        # Update previous block used
+        block_n_previous = block_n_current
 
     # Calculate CKS coordinates
     if frame_n == 0:
