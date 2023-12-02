@@ -157,10 +157,10 @@ def main(**kwargs):
       # Process header metadata
       if frame_n == 0:
         if location_size not in (4, 8):
-          raise RuntimeError('Only 4- and 8-byte integer types supported for location data.')
+          raise RuntimeError('Only 4- and 8-byte floating-point types supported for location data.')
         location_format = 'f' if location_size == 4 else 'd'
         if variable_size not in (4, 8):
-          raise RuntimeError('Only 4- and 8-byte integer types supported for cell data.')
+          raise RuntimeError('Only 4- and 8-byte floating-point types supported for cell data.')
         variable_format = 'f' if variable_size == 4 else 'd'
         num_variables_base = len(variable_names_base)
         variable_names = []
