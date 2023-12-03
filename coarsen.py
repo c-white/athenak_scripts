@@ -25,6 +25,7 @@ must divide all 3 MeshBlock dimensions.
 
 Options:
   --mpi: flag indicating MPI should be used to distribute work
+  --verbose (-v): flag indicating detailed progress should updates should be given
 
 Averaging is done in file quantities, and so may not be exactly conservative.
 
@@ -36,6 +37,7 @@ This script is optimized for using a minimal amount of memory.
 
 # Python standard modules
 import argparse
+import os
 import struct
 
 # Numerical modules
@@ -52,10 +54,17 @@ def main(**kwargs):
   frame_stride = kwargs['frame_stride']
   factor = kwargs['factor']
   use_mpi = kwargs['mpi']
+  verbose = kwargs['verbose']
 
   # Check for files being overwritten
-  if input_file_base == output_file_base:
-    raise RuntimeError('Attempting to overwrite data; coarsening in place not supported.')
+  input_file = '{0}.{1:05d}.bin'.format(input_file_base, frame_min)
+  output_file = '{0}.{1:05d}.bin'.format(output_file_base, frame_min)
+  if os.path.isfile(input_file):
+    if os.path.isfile(output_file):
+      if os.path.samefile(input_file, output_file):
+        raise RuntimeError('Attempting to overwrite data; coarsening in place not supported.')
+  else:
+    raise RuntimeError('Input file {0} not found.'.format(input_file))
 
   # Check for sensible coarsening factor
   if factor <= 1:
@@ -199,6 +208,15 @@ def main(**kwargs):
         # Go through blocks
         for block_n in range(num_blocks):
 
+          # Report progress
+          if verbose:
+            if not use_mpi:
+              print('File {0} / {1}, block {2} / {3}'\
+                  .format(frame_n + 1, len(frames), block_n + 1, num_blocks))
+            elif rank == 0:
+              print('Rank 0: file {0} / {1}, block {2} / {3}'\
+                  .format(frame_n + 1, num_frames_local, block_n + 1, num_blocks))
+
           # Read and write grid structure data
           f_old.seek(24, 1)
           f_new.write(struct.pack('@6i', *block_indices_new))
@@ -237,5 +255,7 @@ if __name__ == '__main__':
   parser.add_argument('factor', type=int, help='coarsening stencil size in each dimension')
   parser.add_argument('--mpi', action='store_true', \
       help='flag indicating MPI should be used to distribute work')
+  parser.add_argument('-v', '--verbose', action='store_true', \
+      help='flag indicating detailed progress should updates should be given')
   args = parser.parse_args()
   main(**vars(args))
